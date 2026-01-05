@@ -225,7 +225,19 @@ async function resetPasswordRequest(email) {
 
   // ✅ Point to the Student Frontend for password reset
   // IMPORTANT: This MUST be a frontend URL, NOT the backend API URL
-  let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || 'http://localhost:5174';
+  let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
+  
+  // Only use localhost fallback in development
+  if (!frontendUrl) {
+    if (process.env.NODE_ENV === 'production') {
+      // In production, require environment variable - use production domain as fallback
+      frontendUrl = 'https://careersync-4be.ptascloud.online';
+      console.warn('⚠️ CLIENT_BASE_URL_STUDENT not set in production! Using production domain fallback.');
+    } else {
+      // Development fallback
+      frontendUrl = 'http://localhost:5174';
+    }
+  }
   
   // Safety check: Remove any /api paths and ensure it's not pointing to backend
   frontendUrl = frontendUrl.replace(/\/api\/?$/, '').replace(/\/$/, '');
@@ -233,10 +245,12 @@ async function resetPasswordRequest(email) {
   const apiHost = process.env.APP_URL || process.env.API_URL || `http://localhost:${apiPort}`;
   const normalizedApiUrl = apiHost.replace(/\/$/, '').replace(/\/api\/?$/, '');
   
-  // If frontendUrl matches backend URL, use safe default to prevent redirect loop
+  // If frontendUrl matches backend URL, use production domain to prevent redirect loop
   if (frontendUrl === normalizedApiUrl || frontendUrl.includes(`:${apiPort}`)) {
-    console.warn('⚠️ Frontend URL in email appears to point to backend! Using safe default.');
-    frontendUrl = 'http://localhost:5174';
+    console.warn('⚠️ Frontend URL in email appears to point to backend! Using production domain.');
+    frontendUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://careersync-4be.ptascloud.online' 
+      : 'http://localhost:5174';
   }
   
   const resetUrl = `${frontendUrl}/reset/${resetToken}`;

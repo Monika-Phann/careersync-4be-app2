@@ -36,13 +36,23 @@ exports.verifyEmail = async (req, res) => {
     await authService.verifyEmailToken(token);
     
     // Redirect to the student frontend using env
-    const frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || 'http://localhost:5174';
+    let frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
+    if (!frontendUrl) {
+      frontendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://careersync-4be.ptascloud.online' 
+        : 'http://localhost:5174';
+    }
     return res.redirect(`${frontendUrl}/signin?verified=true`);
 
   } catch (err) {
     console.error("Verification error:", err.message);
     // Redirect to frontend with error flag
-    const frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || 'http://localhost:5174';
+    let frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
+    if (!frontendUrl) {
+      frontendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://careersync-4be.ptascloud.online' 
+        : 'http://localhost:5174';
+    }
     return res.redirect(`${frontendUrl}/signin?error=verification_failed`);
   }
 };
@@ -101,7 +111,12 @@ exports.showResetPasswordForm = async (req, res) => {
     const { token } = req.params;
     
     if (!token) {
-      const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || 'http://localhost:5174';
+      let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC;
+      if (!frontendUrl) {
+        frontendUrl = process.env.NODE_ENV === 'production' 
+          ? 'https://careersync-4be.ptascloud.online' 
+          : 'http://localhost:5174';
+      }
       return res.redirect(302, `${frontendUrl}/reset?error=invalid`);
     }
     
@@ -110,7 +125,17 @@ exports.showResetPasswordForm = async (req, res) => {
     const user = await User.findOne({ where: { reset_token: token } });
     
     // Get frontend URL - ensure it's NOT the backend API URL
-    let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || 'http://localhost:5174';
+    let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
+    
+    // Only use localhost fallback in development
+    if (!frontendUrl) {
+      if (process.env.NODE_ENV === 'production') {
+        frontendUrl = 'https://careersync-4be.ptascloud.online';
+        console.warn('⚠️ CLIENT_BASE_URL_STUDENT not set in production! Using production domain fallback.');
+      } else {
+        frontendUrl = 'http://localhost:5174';
+      }
+    }
     
     // Safety check: prevent redirect loop - ensure frontendUrl is NOT pointing to backend
     const apiPort = process.env.PORT || '5001';
@@ -120,10 +145,12 @@ exports.showResetPasswordForm = async (req, res) => {
     frontendUrl = frontendUrl.replace(/\/$/, '').replace(/\/api\/?$/, '');
     const normalizedApiUrl = apiHost.replace(/\/$/, '').replace(/\/api\/?$/, '');
     
-    // If frontendUrl matches backend URL or contains API paths, use safe default
+    // If frontendUrl matches backend URL or contains API paths, use production domain
     if (frontendUrl === normalizedApiUrl || frontendUrl.includes('/api') || frontendUrl.includes(`:${apiPort}`)) {
-      console.warn('⚠️ Frontend URL appears to point to backend! Using safe default to prevent redirect loop.');
-      frontendUrl = 'http://localhost:5174'; // Safe default for development
+      console.warn('⚠️ Frontend URL appears to point to backend! Using production domain.');
+      frontendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://careersync-4be.ptascloud.online' 
+        : 'http://localhost:5174';
     }
 
     if (!user) {
@@ -138,7 +165,12 @@ exports.showResetPasswordForm = async (req, res) => {
     res.redirect(302, `${frontendUrl}/reset/${token}`);
   } catch (err) {
     console.error('Error showing reset password form:', err);
-    const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || 'http://localhost:5174';
+    let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC;
+    if (!frontendUrl) {
+      frontendUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://careersync-4be.ptascloud.online' 
+        : 'http://localhost:5174';
+    }
     res.redirect(302, `${frontendUrl}/reset?error=invalid`);
   }
 };
