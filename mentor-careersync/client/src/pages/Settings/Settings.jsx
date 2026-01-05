@@ -19,6 +19,10 @@ import {
   Divider,
   Grid,
   Link,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material'
 import {
   Email as EmailIcon,
@@ -149,17 +153,7 @@ const profileValidationSchema = yup.object({
         return false
       }
     })
-    .max(255, 'Social media URL must be less than 255 characters'),
-  sessionRate: yup
-    .number()
-    .nullable()
-    .min(0, 'Session rate cannot be negative')
-    .max(10000, 'Session rate must be less than 10000'),
-  meetingLocation: yup
-    .string()
-    .trim()
-    .nullable()
-    .max(255, 'Meeting location must be less than 255 characters'),
+    .max(255, 'LinkedIn URL must be less than 255 characters'),
 })
 
 const passwordValidationSchema = yup.object({
@@ -189,6 +183,11 @@ function Settings() {
   const [isEditMode, setIsEditMode] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [industries, setIndustries] = useState([])
+  const [positions, setPositions] = useState([])
+  const [filteredPositions, setFilteredPositions] = useState([])
+  const [loadingIndustries, setLoadingIndustries] = useState(false)
+  const [loadingPositions, setLoadingPositions] = useState(false)
   const [accountData, setAccountData] = useState({
     firstName: '',
     lastName: '',
@@ -235,6 +234,146 @@ function Settings() {
   const [passwordErrors, setPasswordErrors] = useState({})
   const [touchedFields, setTouchedFields] = useState({})
 
+  // Fetch industries and positions
+  useEffect(() => {
+    const fetchIndustriesAndPositions = async () => {
+      try {
+        setLoadingIndustries(true)
+        setLoadingPositions(true)
+        
+        // Fetch industries - these are public endpoints (note: plural /industries)
+        const industriesResponse = await axiosInstance.get('/industries')
+        console.log('Industries response:', industriesResponse.data)
+        if (industriesResponse.data && Array.isArray(industriesResponse.data)) {
+          setIndustries(industriesResponse.data)
+        } else {
+          console.warn('Industries data is not an array:', industriesResponse.data)
+          setIndustries([])
+        }
+        
+        // Fetch all positions - these are public endpoints (note: plural /positions)
+        const positionsResponse = await axiosInstance.get('/positions')
+        console.log('Positions response:', positionsResponse.data)
+        if (positionsResponse.data && Array.isArray(positionsResponse.data)) {
+          setPositions(positionsResponse.data)
+        } else {
+          console.warn('Positions data is not an array:', positionsResponse.data)
+          setPositions([])
+        }
+      } catch (error) {
+        console.error('Error fetching industries/positions:', error)
+        console.error('Error details:', error.response?.data || error.message)
+        // Set empty arrays on error
+        setIndustries([])
+        setPositions([])
+      } finally {
+        setLoadingIndustries(false)
+        setLoadingPositions(false)
+      }
+    }
+    
+    fetchIndustriesAndPositions()
+  }, [])
+
+  // Match industry and position objects when lists are loaded
+  // This ensures dropdowns show the correct selected values
+  useEffect(() => {
+    if (industries.length > 0 && accountData.industry) {
+      const industryId = typeof accountData.industry === 'object' && accountData.industry.id
+        ? accountData.industry.id
+        : typeof accountData.industry === 'string'
+          ? accountData.industry
+          : null
+      
+      if (industryId) {
+        const matchedIndustry = industries.find(ind => ind.id === industryId)
+        // Only update if we found a match and it's different from current
+        if (matchedIndustry) {
+          const currentId = typeof accountData.industry === 'object' && accountData.industry.id
+            ? accountData.industry.id
+            : accountData.industry
+          
+          if (currentId !== matchedIndustry.id || typeof accountData.industry === 'string') {
+            setAccountData(prev => ({
+              ...prev,
+              industry: matchedIndustry
+            }))
+          }
+        }
+      }
+    }
+  }, [industries]) // Only depend on industries, not accountData.industry to avoid loops
+
+  useEffect(() => {
+    if (positions.length > 0 && accountData.position) {
+      const positionId = typeof accountData.position === 'object' && accountData.position.id
+        ? accountData.position.id
+        : typeof accountData.position === 'string'
+          ? accountData.position
+          : null
+      
+      if (positionId) {
+        const matchedPosition = positions.find(pos => pos.id === positionId)
+        // Only update if we found a match and it's different from current
+        if (matchedPosition) {
+          const currentId = typeof accountData.position === 'object' && accountData.position.id
+            ? accountData.position.id
+            : accountData.position
+          
+          if (currentId !== matchedPosition.id || typeof accountData.position === 'string') {
+            setAccountData(prev => ({
+              ...prev,
+              position: matchedPosition
+            }))
+          }
+        }
+      }
+    }
+  }, [positions]) // Only depend on positions, not accountData.position to avoid loops
+
+  // Filter positions based on selected industry
+  useEffect(() => {
+    if (!accountData.industry) {
+      setFilteredPositions([])
+      return
+    }
+    
+    // Get industry ID (handle both object and string formats)
+    const industryId = typeof accountData.industry === 'object' && accountData.industry.id
+      ? accountData.industry.id
+      : typeof accountData.industry === 'string'
+        ? accountData.industry
+        : null
+    
+    if (!industryId || positions.length === 0) {
+      setFilteredPositions([])
+      return
+    }
+    
+    // Filter positions by industry_id
+    const filtered = positions.filter(pos => pos.industry_id === industryId)
+    
+    // If we have a current position that's not in the filtered list (shouldn't happen, but just in case),
+    // add it to the list so it shows up in the dropdown
+    if (accountData.position) {
+      const currentPositionId = typeof accountData.position === 'object' && accountData.position.id
+        ? accountData.position.id
+        : typeof accountData.position === 'string'
+          ? accountData.position
+          : null
+      
+      if (currentPositionId && !filtered.find(p => p.id === currentPositionId)) {
+        // Find the position in the full positions list
+        const currentPosition = positions.find(p => p.id === currentPositionId)
+        if (currentPosition) {
+          filtered.push(currentPosition)
+        }
+      }
+    }
+    
+    setFilteredPositions(filtered)
+  }, [accountData.industry, accountData.position, positions])
+
   // Fetch mentor profile data
   useEffect(() => {
     const fetchProfile = async () => {
@@ -255,6 +394,33 @@ function Settings() {
           : null
         
         // Map all mentor data (handle both snake_case and camelCase)
+        // Handle industry and position - ensure they're stored as objects with id for dropdown matching
+        const industryData = mentor.Industry || mentor.industry || null
+        const positionData = mentor.Position || mentor.position || null
+        
+        // If industry/position are just IDs, try to find the full objects from fetched lists
+        // But if they're already objects, keep them as is
+        let finalIndustry = industryData
+        let finalPosition = positionData
+        
+        // If industry is just an ID string, we'll need to wait for industries to load
+        // For now, store it as is - the useEffect will handle matching when industries load
+        if (industryData && typeof industryData === 'string') {
+          // It's just an ID, we'll match it when industries are loaded
+          finalIndustry = industryData
+        } else if (industryData && industryData.id) {
+          // It's already an object with id, keep it
+          finalIndustry = industryData
+        }
+        
+        if (positionData && typeof positionData === 'string') {
+          // It's just an ID, we'll match it when positions load
+          finalPosition = positionData
+        } else if (positionData && positionData.id) {
+          // It's already an object with id, keep it
+          finalPosition = positionData
+        }
+        
         setAccountData({
           firstName: mentor.first_name || mentor.firstName || '',
           lastName: mentor.last_name || mentor.lastName || '',
@@ -264,15 +430,13 @@ function Settings() {
           dob: mentor.dob || '',
           profileImageUrl: profileImageUrl,
           jobTitle: mentor.job_title || mentor.jobTitle || '',
-          position: mentor.Position || mentor.position || null,
-          industry: mentor.Industry || mentor.industry || null,
-          companyName: mentor.company_name || mentor.companyName || '',
+          position: finalPosition,
+          industry: finalIndustry,
+          companyName: mentor.company_name || mentor.companyName || null,
           experienceYears: mentor.experience_years || mentor.experienceYears || null,
           expertiseAreas: mentor.expertise_areas || mentor.expertiseAreas || '',
           aboutMentor: mentor.about_mentor || mentor.aboutMentor || '',
           socialMedia: mentor.social_media || mentor.socialMedia || '',
-          sessionRate: mentor.session_rate || mentor.sessionRate || null,
-          meetingLocation: mentor.meeting_location || mentor.meetingLocation || '',
           sessionAgendaPdf: mentor.session_agenda_pdf || mentor.sessionAgendaPdf || null,
           portfolioPdf: mentor.portfolio_pdf || mentor.portfolioPdf || null,
           education: mentor.MentorEducations || mentor.education || [],
@@ -296,10 +460,19 @@ function Settings() {
   }
 
   const handleAccountChange = async (field, value) => {
-    setAccountData((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
+    // If industry changes, clear position selection
+    if (field === 'industry') {
+      setAccountData((prev) => ({
+        ...prev,
+        [field]: value,
+        position: null, // Clear position when industry changes
+      }))
+    } else {
+      setAccountData((prev) => ({
+        ...prev,
+        [field]: value,
+      }))
+    }
     
     // Validate field on change if it's been touched
     if (touchedFields[field] || isEditMode) {
@@ -383,7 +556,6 @@ function Settings() {
         companyName: (accountData.companyName && accountData.companyName.trim()) || null,
         expertiseAreas: (accountData.expertiseAreas && accountData.expertiseAreas.trim()) || null,
         aboutMentor: (accountData.aboutMentor && accountData.aboutMentor.trim()) || null,
-        meetingLocation: (accountData.meetingLocation && accountData.meetingLocation.trim()) || null,
         // Normalize gender: empty string to null
         gender: (accountData.gender && accountData.gender.trim()) || null,
         // Normalize dob: empty string to null, but keep valid dates
@@ -415,9 +587,7 @@ function Settings() {
           experienceYears: 'Years of Experience',
           expertiseAreas: 'Expertise Areas',
           aboutMentor: 'About Mentor',
-          socialMedia: 'Social Media',
-          sessionRate: 'Session Rate',
-          meetingLocation: 'Meeting Location',
+          socialMedia: 'LinkedIn',
         }
         
         // Store errors in a structured format for better UI display
@@ -447,34 +617,40 @@ function Settings() {
         expertiseAreas: dataToValidate.expertiseAreas || null,
         aboutMentor: dataToValidate.aboutMentor || null,
         socialMedia: dataToValidate.socialMedia || null,
-        sessionRate: dataToValidate.sessionRate || null,
-        meetingLocation: dataToValidate.meetingLocation || null,
       }
 
-      // Handle position and industry if they're objects (UUIDs, not integers)
+      // Handle position and industry IDs
       if (accountData.position) {
-        const positionId = typeof accountData.position === 'object' 
+        const positionId = typeof accountData.position === 'object' && accountData.position.id
           ? accountData.position.id 
-          : accountData.position
-        // Ensure it's a valid UUID string (not a number)
+          : typeof accountData.position === 'string'
+            ? accountData.position
+            : accountData.position
+        // Ensure it's a valid UUID string
         if (positionId) {
           const positionIdStr = String(positionId).trim()
           // Basic UUID validation
           if (positionIdStr.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
             updateData.position_id = positionIdStr
+          } else {
+            console.warn('Invalid position_id format:', positionIdStr)
           }
         }
       }
       if (accountData.industry) {
-        const industryId = typeof accountData.industry === 'object' 
+        const industryId = typeof accountData.industry === 'object' && accountData.industry.id
           ? accountData.industry.id 
-          : accountData.industry
-        // Ensure it's a valid UUID string (not a number)
+          : typeof accountData.industry === 'string'
+            ? accountData.industry
+            : accountData.industry
+        // Ensure it's a valid UUID string
         if (industryId) {
           const industryIdStr = String(industryId).trim()
           // Basic UUID validation
           if (industryIdStr.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
             updateData.industry_id = industryIdStr
+          } else {
+            console.warn('Invalid industry_id format:', industryIdStr)
           }
         }
       }
@@ -510,8 +686,6 @@ function Settings() {
         expertiseAreas: mentor.expertise_areas || mentor.expertiseAreas || prev.expertiseAreas,
         aboutMentor: mentor.about_mentor || mentor.aboutMentor || prev.aboutMentor,
         socialMedia: mentor.social_media || mentor.socialMedia || prev.socialMedia,
-        sessionRate: mentor.session_rate || mentor.sessionRate || prev.sessionRate,
-        meetingLocation: mentor.meeting_location || mentor.meetingLocation || prev.meetingLocation,
         education: mentor.MentorEducations || mentor.education || prev.education,
         documents: mentor.MentorDocuments || mentor.documents || prev.documents,
       }))
@@ -566,8 +740,6 @@ function Settings() {
         expertiseAreas: refreshedMentor.expertise_areas || refreshedMentor.expertiseAreas || prev.expertiseAreas,
         aboutMentor: refreshedMentor.about_mentor || refreshedMentor.aboutMentor || prev.aboutMentor,
         socialMedia: refreshedMentor.social_media || refreshedMentor.socialMedia || prev.socialMedia,
-        sessionRate: refreshedMentor.session_rate || refreshedMentor.sessionRate || prev.sessionRate,
-        meetingLocation: refreshedMentor.meeting_location || refreshedMentor.meetingLocation || prev.meetingLocation,
         education: refreshedMentor.MentorEducations || refreshedMentor.education || prev.education,
         documents: refreshedMentor.MentorDocuments || refreshedMentor.documents || prev.documents,
       }))
@@ -609,13 +781,11 @@ function Settings() {
           jobTitle: mentor.job_title || mentor.jobTitle || '',
           position: mentor.Position || mentor.position || null,
           industry: mentor.Industry || mentor.industry || null,
-          companyName: mentor.company_name || mentor.companyName || '',
+          companyName: mentor.company_name || mentor.companyName || null,
           experienceYears: mentor.experience_years || mentor.experienceYears || null,
           expertiseAreas: mentor.expertise_areas || mentor.expertiseAreas || '',
           aboutMentor: mentor.about_mentor || mentor.aboutMentor || '',
           socialMedia: mentor.social_media || mentor.socialMedia || '',
-          sessionRate: mentor.session_rate || mentor.sessionRate || null,
-          meetingLocation: mentor.meeting_location || mentor.meetingLocation || '',
           sessionAgendaPdf: mentor.session_agenda_pdf || mentor.sessionAgendaPdf || null,
           portfolioPdf: mentor.portfolio_pdf || mentor.portfolioPdf || null,
           education: mentor.MentorEducations || mentor.education || [],
@@ -928,25 +1098,7 @@ function Settings() {
                       <Grid item xs={12} sm={6}>
                         <TextField
                           fullWidth
-                          label="Session Rate"
-                          value={accountData.sessionRate ? `$${accountData.sessionRate}` : ''}
-                          disabled
-                          sx={SettingsStyles.textField}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          fullWidth
-                          label="Meeting Location"
-                          value={accountData.meetingLocation || ''}
-                          disabled
-                          sx={SettingsStyles.textField}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          fullWidth
-                          label="Social Media"
+                          label="LinkedIn"
                           value={accountData.socialMedia || ''}
                           disabled
                           sx={SettingsStyles.textField}
@@ -1383,30 +1535,100 @@ function Settings() {
                           />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                          <TextField
-                            fullWidth
-                            label="Position"
-                            value={accountData.position?.name || accountData.position || ''}
-                            onChange={(e) => handleAccountChange('position', e.target.value)}
-                            sx={SettingsStyles.textField}
-                            helperText="Enter position name"
-                          />
+                          <FormControl fullWidth sx={SettingsStyles.textField}>
+                            <InputLabel id="industry-select-label">Industry *</InputLabel>
+                            <Select
+                              labelId="industry-select-label"
+                              id="industry-select"
+                              value={
+                                accountData.industry?.id || 
+                                (typeof accountData.industry === 'string' ? accountData.industry : '') || 
+                                ''
+                              }
+                              label="Industry *"
+                              onChange={(e) => {
+                                const selectedIndustry = industries.find(ind => ind.id === e.target.value)
+                                handleAccountChange('industry', selectedIndustry || e.target.value)
+                              }}
+                              onBlur={() => handleFieldBlur('industry')}
+                              error={!!profileErrors.industry}
+                              disabled={loadingIndustries}
+                            >
+                              <MenuItem value="">
+                                <em>Select Industry</em>
+                              </MenuItem>
+                              {industries.map((industry) => (
+                                <MenuItem key={industry.id} value={industry.id}>
+                                  {industry.industry_name}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                            {profileErrors.industry && (
+                              <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                                {profileErrors.industry}
+                              </Typography>
+                            )}
+                            {!profileErrors.industry && (
+                              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.75 }}>
+                                Select your industry
+                              </Typography>
+                            )}
+                          </FormControl>
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                          <TextField
-                            fullWidth
-                            label="Industry"
-                            value={accountData.industry?.name || accountData.industry || ''}
-                            onChange={(e) => handleAccountChange('industry', e.target.value)}
-                            sx={SettingsStyles.textField}
-                            helperText="Enter industry name"
-                          />
+                          <FormControl fullWidth sx={SettingsStyles.textField}>
+                            <InputLabel id="position-select-label">Position *</InputLabel>
+                            <Select
+                              labelId="position-select-label"
+                              id="position-select"
+                              value={
+                                accountData.position?.id || 
+                                (typeof accountData.position === 'string' ? accountData.position : '') || 
+                                ''
+                              }
+                              label="Position *"
+                              onChange={(e) => {
+                                const selectedPosition = filteredPositions.find(pos => pos.id === e.target.value)
+                                handleAccountChange('position', selectedPosition || e.target.value)
+                              }}
+                              onBlur={() => handleFieldBlur('position')}
+                              error={!!profileErrors.position}
+                              disabled={!accountData.industry || loadingPositions}
+                            >
+                              <MenuItem value="">
+                                <em>
+                                  {!accountData.industry 
+                                    ? 'Select Industry first' 
+                                    : filteredPositions.length === 0 
+                                      ? 'No positions available' 
+                                      : 'Select Position'}
+                                </em>
+                              </MenuItem>
+                              {filteredPositions.map((position) => (
+                                <MenuItem key={position.id} value={position.id}>
+                                  {position.position_name}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                            {profileErrors.position && (
+                              <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                                {profileErrors.position}
+                              </Typography>
+                            )}
+                            {!profileErrors.position && (
+                              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.75 }}>
+                                {!accountData.industry 
+                                  ? 'Please select an industry first' 
+                                  : 'Select your position'}
+                              </Typography>
+                            )}
+                          </FormControl>
                         </Grid>
                         <Grid item xs={12} sm={6}>
                           <TextField
                             fullWidth
                             label="Company Name"
-                            value={accountData.companyName}
+                            value={accountData.companyName || ''}
                             onChange={(e) => handleAccountChange('companyName', e.target.value)}
                             onBlur={() => handleFieldBlur('companyName')}
                             error={!!profileErrors.companyName}
@@ -1435,12 +1657,12 @@ function Settings() {
                         <Grid item xs={12} sm={6}>
                           <TextField
                             fullWidth
-                            label="Social Media"
+                            label="LinkedIn"
                             value={accountData.socialMedia}
                             onChange={(e) => handleAccountChange('socialMedia', e.target.value)}
                             onBlur={() => handleFieldBlur('socialMedia')}
                             error={!!profileErrors.socialMedia}
-                            helperText={profileErrors.socialMedia || 'Enter a valid URL (e.g., https://linkedin.com/in/yourprofile)'}
+                            helperText={profileErrors.socialMedia || 'Enter your LinkedIn profile URL (e.g., https://linkedin.com/in/yourprofile)'}
                             sx={SettingsStyles.textField}
                             InputProps={{
                               startAdornment: (

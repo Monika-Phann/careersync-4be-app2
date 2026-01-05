@@ -39,8 +39,9 @@ export default function MentorBrowse() {
   const [searchParams] = useSearchParams();
   
   const initialSearch = searchParams.get("search") || "";
+  const initialCategory = searchParams.get("category") || "All";
   const [search, setSearch] = useState(initialSearch);
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [mentors, setMentors] = useState([]);
   const [industries, setIndustries] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -50,6 +51,19 @@ export default function MentorBrowse() {
   useEffect(() => {
     setSearch(initialSearch);
   }, [initialSearch]);
+
+  // Update activeCategory when category URL parameter changes
+  useEffect(() => {
+    const categoryParam = searchParams.get("category");
+    if (categoryParam) {
+      const decodedCategory = decodeURIComponent(categoryParam);
+      setActiveCategory(decodedCategory);
+      // Scroll to top when category changes from URL (e.g., when coming from Programs page)
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setActiveCategory("All");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchIndustries = async () => {
@@ -185,7 +199,13 @@ export default function MentorBrowse() {
           ) : industries.length > 0 ? (
             <>
               <Box
-                onClick={() => setActiveCategory("All")}
+                onClick={() => {
+                  setActiveCategory("All");
+                  // Update URL without category parameter
+                  const newSearchParams = new URLSearchParams(searchParams);
+                  newSearchParams.delete("category");
+                  navigate(`/mentors?${newSearchParams.toString()}`, { replace: true });
+                }}
                 sx={{
                   px: 2, py: 1, borderRadius: 2, cursor: 'pointer', fontSize: 14, fontWeight: 600,
                   bgcolor: activeCategory === "All" ? '#06112E' : '#E9EEF3',
@@ -199,7 +219,13 @@ export default function MentorBrowse() {
               {industries.map((industry) => (
                 <Box
                   key={industry}
-                  onClick={() => setActiveCategory(industry)}
+                  onClick={() => {
+                    setActiveCategory(industry);
+                    // Update URL with selected category
+                    const newSearchParams = new URLSearchParams(searchParams);
+                    newSearchParams.set("category", encodeURIComponent(industry));
+                    navigate(`/mentors?${newSearchParams.toString()}`, { replace: true });
+                  }}
                   sx={{
                     px: 2, py: 1, borderRadius: 2, cursor: 'pointer', fontSize: 14, fontWeight: 600,
                     bgcolor: activeCategory === industry ? '#06112E' : '#E9EEF3',
