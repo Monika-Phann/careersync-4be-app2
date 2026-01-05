@@ -9,8 +9,7 @@ const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 const ACCESS_EXPIRES = process.env.JWT_ACCESS_TOKEN_EXPIRES_IN || "15m";
 const REFRESH_EXPIRES = process.env.JWT_REFRESH_TOKEN_EXPIRES_IN || "7d";
-const APP_URL =
-  process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
+const APP_URL = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
 
 function generateToken(payload, secret, expiresIn) {
   return jwt.sign(payload, secret, {
@@ -19,7 +18,7 @@ function generateToken(payload, secret, expiresIn) {
   });
 }
 
-async function registerUser(data, file) {
+async function registerUser(data, fileUrl) {
   let {
     email,
     password,
@@ -44,7 +43,14 @@ async function registerUser(data, file) {
   dob = dob?.trim();
   phone = phone?.trim();
 
-  profileImage = file ? file.filename : profileImage?.trim() || "default.png";
+  // ✅ FIX: Handle R2 Image URL correctly
+  // If 'fileUrl' is passed (from controller), use it. 
+  // Otherwise fall back to 'default.png'.
+  if (fileUrl && typeof fileUrl === 'string') {
+    profileImage = fileUrl;
+  } else {
+    profileImage = "default.png";
+  }
 
   if (!email || !password) throw new Error("email and password are required");
 
@@ -55,14 +61,14 @@ async function registerUser(data, file) {
   const verifyToken = crypto.randomBytes(32).toString("hex");
   const verifyTokenExp = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-  // Create User record - ALL snake_case
+  // Create User record
   const user = await User.create({
     email,
     password: hashedPassword,
     role_name: role || "acc_user",
-    verify_token: verifyToken, // CHANGED from verifyToken
-    verify_token_exp: verifyTokenExp, // CHANGED from verifyTokenExp
-    email_verified: false, // CHANGED from emailVerified
+    verify_token: verifyToken, 
+    verify_token_exp: verifyTokenExp,
+    email_verified: false,
   });
 
   // Create AccUser record if role is acc_user
@@ -76,19 +82,28 @@ async function registerUser(data, file) {
       dob: dob || null,
       types_user: currentstatus,
       institution_name: institution,
-      profile_image: profileImage,
+      profile_image: profileImage, // Now correctly contains the URL or "default.png"
     });
   }
 
-  const verifyUrl = `${APP_URL}/api/auth/verify/${verifyToken}`;
+  // ✅ FIX: Use the Frontend URL for verification link so it doesn't hit the API directly
+  const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || 'https://careersync-4be.ptascloud.online';
+  
+  // Note: We point to the API endpoint here because it handles the logic and redirects
+  // Or we can point to frontend if you have a verify page. 
+  // Let's keep it pointing to the API which we fixed to redirect to /signin
+  const verifyUrl = `${process.env.APP_URL || 'https://api-4be.ptascloud.online'}/api/auth/verify/${verifyToken}`;
+  
   const html = `
-    <p>Hi ${firstname || lastname || "there"},</p>
-    <p>Please verify your email by clicking the link below:</p>
-    <a href="${verifyUrl}">Verify Email</a>
-    <p>This link expires in 24 hours.</p>
+    <div style="font-family: Arial, sans-serif; padding: 20px;">
+      <h2 style="color: #4F46E5;">Welcome, ${firstname || "User"}!</h2>
+      <p>Please verify your email address to activate your account.</p>
+      <a href="${verifyUrl}" style="background-color: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Verify Email</a>
+      <p style="color: #666; font-size: 12px;">This link expires in 24 hours.</p>
+    </div>
   `;
 
-  await sendEmail({ to: email, subject: "Verify your email", html });
+  await sendEmail({ to: email, subject: "Verify your CareerSync Email", html });
 
   return user;
 }
@@ -96,16 +111,16 @@ async function registerUser(data, file) {
 async function verifyEmailToken(token) {
   const user = await User.findOne({
     where: {
-      verify_token: token, // CHANGED from verifyToken
-      verify_token_exp: { [Op.gt]: new Date() }, // CHANGED from verifyTokenExp
+      verify_token: token,
+      verify_token_exp: { [Op.gt]: new Date() },
     },
   });
   if (!user) throw new Error("Invalid or expired token");
 
   await user.update({
-    email_verified: true, // CHANGED from emailVerified
-    verify_token: null, // CHANGED from verifyToken
-    verify_token_exp: null, // CHANGED from verifyTokenExp
+    email_verified: true,
+    verify_token: null,
+    verify_token_exp: null,
   });
 
   return user;
@@ -114,185 +129,103 @@ async function verifyEmailToken(token) {
 async function loginUser(email, password) {
   if (!email || !password) throw new Error("Email and password required");
 
-  // Normalize email to lowercase for case-insensitive matching
   email = email.toLowerCase().trim();
 
   const user = await User.findOne({
     where: { email },
     include: [
-      {
-        model: Admin,
-        attributes: ["id", "full_name", "phone", "profile_image"],
-        required: false,
-      },
-      {
-        model: Mentor,
-        attributes: [
-          "id",
-          "first_name",
-          "last_name",
-          "profile_image",
-          "approval_status",
-          "job_title",
-          "company_name",
-          "phone",
-          "gender",
-          "dob",
-          "expertise_areas",
-          "experience_years",
-          "about_mentor",
-          "social_media",
-        ],
-        required: false,
-      },
-      {
-        model: AccUser,
-        attributes: [
-          "id",
-          "user_id",
-          "first_name",
-          "last_name",
-          "phone",
-          "gender",
-          "dob",
-          "types_user",
-          "institution_name",
-          "profile_image",
-          "deleted_at",
-          "created_at",
-          "updated_at",
-        ],
-        required: false,
-      },
+      { model: Admin, attributes: ["id", "full_name", "phone", "profile_image"], required: false },
+      { model: Mentor, attributes: ["id", "first_name", "last_name", "profile_image", "approval_status"], required: false },
+      { model: AccUser, attributes: ["id", "user_id", "first_name", "last_name", "phone", "profile_image"], required: false },
     ],
   });
+  
   if (!user) throw new Error("Invalid email or password");
 
   const match = await bcrypt.compare(password, user.password);
   if (!match) throw new Error("Invalid email or password");
 
-  // Handle mentor-specific login checks
+  // Check verification
   if (user.role_name === "mentor") {
-    // ✅ NO email verification required for mentors - only admin approval needed
-
-    // Check admin approval status
-    if (user.Mentor) {
-      const approvalStatus = user.Mentor.approval_status;
-
-      if (approvalStatus === "rejected") {
-        throw new Error(
-          "Your mentor account has been rejected by admin. Please contact support if you believe this is an error."
-        );
-      }
-
-      if (approvalStatus === "pending") {
-        throw new Error(
-          "Your mentor account is waiting for admin approval. You will receive an email notification once your application is reviewed."
-        );
-      }
-
-      // If approved, allow login
-      if (approvalStatus !== "approved") {
-        throw new Error(
-          "Your mentor account status is invalid. Please contact support."
-        );
-      }
-    } else {
-      // Mentor record doesn't exist - this shouldn't happen but handle it
-      throw new Error("Mentor profile not found. Please contact support.");
-    }
+     if (user.Mentor && user.Mentor.approval_status !== "approved") {
+        throw new Error("Your mentor account is pending approval or rejected.");
+     }
   } else if (user.role_name !== "admin") {
-    // For non-admin, non-mentor users (students), check email verification
     if (!user.email_verified) {
       throw new Error("Please verify your email before login");
     }
   }
-  // Admin users can bypass email verification (already handled above)
 
-  const accessToken = generateToken(
-    { id: user.id, role: user.role_name },
-    JWT_ACCESS_SECRET,
-    ACCESS_EXPIRES
-  );
-  const refreshToken = generateToken(
-    { id: user.id },
-    JWT_REFRESH_SECRET,
-    REFRESH_EXPIRES
-  );
-  console.log("SIGNING ACCESS TOKEN WITH:", process.env.JWT_ACCESS_SECRET);
-  console.log("ISSUED TOKEN LENGTH:", accessToken.length);
+  const accessToken = generateToken({ id: user.id, role: user.role_name }, JWT_ACCESS_SECRET, ACCESS_EXPIRES);
+  const refreshToken = generateToken({ id: user.id }, JWT_REFRESH_SECRET, REFRESH_EXPIRES);
 
-  await user.update({ refresh_token: refreshToken }); // CHANGED from refreshToken
+  await user.update({ refresh_token: refreshToken });
 
-  // Convert to plain object to avoid serialization issues
   const userData = user.toJSON ? user.toJSON() : user;
-
   return { user: userData, accessToken, refreshToken };
 }
 
 async function refreshToken(token) {
   if (!token) throw new Error("No refresh token");
-
-  const user = await User.findOne({ where: { refresh_token: token } }); // CHANGED from refreshToken
+  const user = await User.findOne({ where: { refresh_token: token } });
   if (!user) throw new Error("Invalid refresh token");
 
   jwt.verify(token, JWT_REFRESH_SECRET, (err) => {
     if (err) throw new Error("Token expired");
   });
 
-  const accessToken = generateToken(
-    { id: user.id, role: user.role_name },
-    JWT_ACCESS_SECRET,
-    ACCESS_EXPIRES
-  );
-  return accessToken;
+  return generateToken({ id: user.id, role: user.role_name }, JWT_ACCESS_SECRET, ACCESS_EXPIRES);
 }
 
 async function logoutUser(token) {
   if (!token) return null;
-
-  const user = await User.findOne({ where: { refresh_token: token } }); // CHANGED from refreshToken
+  const user = await User.findOne({ where: { refresh_token: token } });
   if (!user) return null;
-
-  await user.update({ refresh_token: null }); // CHANGED from refreshToken
+  await user.update({ refresh_token: null });
   return user;
 }
 
 async function resetPasswordRequest(email) {
   if (!email) throw new Error("Email required");
-
-  // Normalize email to lowercase for case-insensitive matching
   email = email.toLowerCase().trim();
 
   const user = await User.findOne({ where: { email } });
-  if (!user) return;
+  if (!user) return; // Silent return for security
 
   const resetToken = crypto.randomBytes(32).toString("hex");
   const resetExp = new Date(Date.now() + 60 * 60 * 1000);
 
   await user.update({
-    reset_token: resetToken, // CHANGED from resetToken
-    reset_token_exp: resetExp, // CHANGED from resetTokenExp
+    reset_token: resetToken,
+    reset_token_exp: resetExp,
   });
 
-  // Use frontend URL, not API URL - the frontend will handle the reset form
-  const frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
+  // ✅ FIX: Ensure this points to the Student Frontend, not the API
+  const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || 'https://careersync-4be.ptascloud.online';
   const resetUrl = `${frontendUrl}/reset/${resetToken}`;
-  const html = `<p>Reset your password by clicking below:</p><p><a href="${resetUrl}">Reset Password</a></p><p>This link is valid for 1 hour.</p>`;
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; padding: 20px;">
+      <h2 style="color: #4F46E5;">Reset Password</h2>
+      <p>Click the button below to reset your password:</p>
+      <a href="${resetUrl}" style="background-color: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Reset Password</a>
+      <p style="color: #666; font-size: 12px;">This link is valid for 1 hour.</p>
+    </div>
+  `;
 
-  await sendEmail({ to: email, subject: "Password reset", html });
+  await sendEmail({ to: email, subject: "CareerSync Password Reset", html });
 }
 
 async function resetPassword(token, password) {
-  const user = await User.findOne({ where: { reset_token: token } }); // CHANGED from resetToken
+  const user = await User.findOne({ where: { reset_token: token } });
   if (!user) throw new Error("Invalid token");
-  if (user.reset_token_exp < new Date()) throw new Error("Token expired"); // CHANGED from resetTokenExp
+  if (user.reset_token_exp < new Date()) throw new Error("Token expired");
 
   const hashed = await bcrypt.hash(password, 10);
   await user.update({
     password: hashed,
-    reset_token: null, // CHANGED from resetToken
-    reset_token_exp: null, // CHANGED from resetTokenExp
+    reset_token: null,
+    reset_token_exp: null,
   });
 }
 

@@ -1,34 +1,38 @@
 // src/middleware/upload.js
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+const { S3Client } = require('@aws-sdk/client-s3');
+const multer = require('multer');
+const multerS3 = require('multer-s3');
+const path = require('path');
 
-const uploadDir = path.join(__dirname, "..", "..", "uploads");
-const documentsDir = path.join(uploadDir, "documents");
+// 1. Initialize Cloudflare R2 Client
+const s3 = new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+  },
+});
 
-// Create directories if they don't exist
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-if (!fs.existsSync(documentsDir)) fs.mkdirSync(documentsDir, { recursive: true });
-
-// Storage for profile images
-const profileStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
+// Helper to create S3 Storage Engine for specific folders
+const createS3Storage = (folderName) => multerS3({
+  s3: s3,
+  bucket: process.env.R2_BUCKET_NAME,
+  acl: 'public-read',
+  contentType: multerS3.AUTO_CONTENT_TYPE,
+  metadata: (req, file, cb) => {
+    cb(null, { fieldName: file.fieldname });
+  },
+  key: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    const name = `profile-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    // e.g. profiles/profile-176234234-8998.png
+    const prefix = folderName === 'profiles' ? 'profile' : 'doc';
+    const name = `${folderName}/${prefix}-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
     cb(null, name);
   }
 });
 
-// Storage for documents (CV, certificates, etc.)
-const documentStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, documentsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const name = `doc-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-    cb(null, name);
-  }
-});
+// --- File Filters ---
 
 // File filter for profile images (images only)
 const imageFilter = (req, file, cb) => {
@@ -55,75 +59,84 @@ const documentFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-// Single profile image upload
+// File filter for strictly PDF
+const pdfFilter = (req, file, cb) => {
+  if (file.mimetype !== 'application/pdf') {
+    return cb(new Error('Only PDF files are allowed'), false);
+  }
+  cb(null, true);
+};
+
+// --- Upload Instances ---
+
+// 1. Profile Image Upload (Saves to 'profiles/' folder in R2)
 const uploadProfile = multer({ 
-  storage: profileStorage, 
+  storage: createS3Storage('profiles'), 
   fileFilter: imageFilter, 
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB
 });
 
-// Multiple documents upload
+// 2. Documents Upload (Saves to 'documents/' folder in R2)
 const uploadDocuments = multer({ 
-  storage: documentStorage, 
+  storage: createS3Storage('documents'), 
   fileFilter: documentFilter, 
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB per file
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
 
-// Storage for PDF uploads (agenda_pdf, etc.)
-const pdfStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, documentsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const name = `agenda-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-    cb(null, name);
-  }
-});
-
-// PDF upload handler (for agenda_pdf, session_agenda, cv_portfolio)
+// 3. PDF Upload (Saves to 'documents/' folder in R2)
 const uploadPDF = multer({ 
-  storage: pdfStorage, 
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype !== 'application/pdf') {
-      return cb(new Error('Only PDF files are allowed'), false);
-    }
-    cb(null, true);
-  },
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit for mentor profile PDFs
+  storage: createS3Storage('documents'), 
+  fileFilter: pdfFilter, 
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
 });
+
+// --- Exports (Maintaining backward compatibility) ---
 
 module.exports = {
   uploadProfile,
   uploadDocuments,
   uploadPDF,
-  // For backward compatibility - handles both images and PDFs based on field name
+
+  // Wrapper for single file uploads that chooses the right uploader
   single: (fieldName) => {
-    if (fieldName === 'agenda_pdf' || fieldName === 'file' || fieldName === 'profile_image') {
-      // Use appropriate uploader based on field name
-      if (fieldName === 'profile_image') {
-        return uploadProfile.single(fieldName);
-      }
-      // Use PDF uploader for agenda_pdf and file fields
+    // If it's a profile image, use the profile uploader
+    if (fieldName === 'profile_image' || fieldName === 'profileImage') {
+      return uploadProfile.single(fieldName);
+    }
+    // If it's strictly a PDF field (like agenda), use PDF uploader
+    if (fieldName === 'agenda_pdf' || fieldName === 'file') {
       return uploadPDF.single(fieldName);
     }
-    // Default to document uploader for other fields
+    // Otherwise default to the general document uploader
     return uploadDocuments.single(fieldName);
   },
+
+  // Wrapper for array uploads
   array: (fieldName, maxCount) => uploadDocuments.array(fieldName, maxCount),
+
+  // Wrapper for mixed fields (e.g. Profile Pic + CV at same time)
   fields: (fields) => multer({ 
-    storage: multer.diskStorage({
-      destination: (req, file, cb) => {
-        if (file.fieldname === 'profile_image') {
-          cb(null, uploadDir);
-        } else {
-          cb(null, documentsDir);
-        }
-      },
-      filename: (req, file, cb) => {
+    storage: multerS3({
+      s3: s3,
+      bucket: process.env.R2_BUCKET_NAME,
+      acl: 'public-read',
+      contentType: multerS3.AUTO_CONTENT_TYPE,
+      key: (req, file, cb) => {
         const ext = path.extname(file.originalname);
-        const prefix = file.fieldname === 'profile_image' ? 'profile' : 'doc';
-        const name = `${prefix}-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-        cb(null, name);
+        // Sort files into correct R2 folders based on fieldname
+        if (file.fieldname === 'profile_image') {
+          cb(null, `profiles/profile-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+        } else {
+          cb(null, `documents/doc-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+        }
       }
-    })
+    }),
+    fileFilter: (req, file, cb) => {
+      // Basic check: just ensure it's one of our allowed types overall
+      if (file.fieldname === 'profile_image' && !file.mimetype.startsWith("image/")) {
+         return cb(new Error("Profile image must be an image file"), false);
+      }
+      cb(null, true);
+    }
   }).fields(fields)
 };

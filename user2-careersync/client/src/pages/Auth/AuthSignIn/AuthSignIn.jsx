@@ -26,6 +26,20 @@ function AuthSignIn() {
     if (error) setError('')
   }
 
+  // ✅ Helper to clean "Double URLs" coming from backend
+  const cleanImageUrl = (url) => {
+    if (!url) return null;
+    // If it looks like: "https://api.../uploads/https://pub..."
+    // We split it and take the second part (the real R2 URL)
+    if (url.includes('/uploads/https://')) {
+      return 'https://' + url.split('/uploads/https://')[1];
+    }
+    if (url.includes('/uploads/http://')) {
+      return 'http://' + url.split('/uploads/http://')[1];
+    }
+    return url;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -40,10 +54,10 @@ function AuthSignIn() {
     setLoading(true)
 
     try {
-      // Normalize email to lowercase for case-insensitive matching
+      // Normalize email
       const result = await loginUser({ email: formData.email.toLowerCase().trim(), password: formData.password })
+      
       if (!result.success) {
-        // Show backend error message (includes mentor-specific messages)
         setError(result.message || 'Login failed. Please try again.')
         return
       }
@@ -51,7 +65,6 @@ function AuthSignIn() {
       const { user, accessToken, token } = result.data || {}
       const finalToken = accessToken || token
 
-      // If backend returns email verification status, enforce it here
       if (user && (user.emailVerified === false || user.email_verified === false)) {
         setError('Please verify your email before signing in.')
         return
@@ -62,52 +75,47 @@ function AuthSignIn() {
         return
       }
 
+      // ✅ FIX: Clean the images using our helper function
+      const rawAvatar = user.avatar || user.profileImage || user.Mentor?.profile_image;
+      const cleanAvatar = cleanImageUrl(rawAvatar);
+
       // Ensure user object has all required fields for display
       const userData = {
         ...user,
         firstName: user.firstName || user.firstname || user.Mentor?.first_name || '',
         lastName: user.lastName || user.lastname || user.Mentor?.last_name || '',
-        avatar: user.avatar || user.profileImage || user.Mentor?.profile_image || null,
-        profileImage: user.profileImage || user.avatar || user.Mentor?.profile_image || null,
+        avatar: cleanAvatar,        // ✅ Uses cleaned URL
+        profileImage: cleanAvatar,  // ✅ Uses cleaned URL
         email: user.email || '',
         phone: user.phone || user.Mentor?.phone || null,
         gender: user.gender || user.Mentor?.gender || null,
         dateOfBirth: user.dateOfBirth || user.dob || user.Mentor?.dob || null,
         status: user.status || user.types_user || null,
         institutionName: user.institutionName || user.institution_name || null,
-        // Include Mentor data if available
         Mentor: user.Mentor || null
       }
 
       console.log('=== LOGIN SUCCESS ===');
-      console.log('User Role:', user.role || user.role_name);
+      console.log('Cleaned Avatar URL:', userData.avatar);
       console.log('===================');
       
-      // Role-based redirection - check role BEFORE calling login()
+      // Role-based redirection
       const userRole = user.role || user.role_name || userData.role;
       
       if (userRole === 'mentor') {
-        // ✅ FIX 1: Hardcoded Production URL for Mentor App
         const mentorPlatformUrl = "https://mentor-4be.ptascloud.online";
-        console.log('Redirecting mentor to:', mentorPlatformUrl);
-        
-        // IMPORTANT: Clear student platform auth state before redirecting
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('accessToken');
-        
-        // ✅ FIX 2: Redirect to the SSO Bridge (/auth/sso) so token is captured
         const redirectUrl = `${mentorPlatformUrl}/auth/sso?token=${encodeURIComponent(finalToken)}`;
-        
-        console.log('Redirecting mentor with token to:', redirectUrl);
         window.location.href = redirectUrl;
-        return; // Exit early
+        return; 
       }
       
-      // For non-mentors (students), set auth state and redirect normally
       login(userData, finalToken);
       navigate('/mentors');
     } catch (err) {
+      console.error(err);
       setError('An unexpected error occurred. Please try again.')
     } finally {
       setLoading(false)

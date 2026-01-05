@@ -2,7 +2,23 @@ const authService = require("../services/auth.service");
 
 exports.register = async (req, res) => {
   try {
-    await authService.registerUser(req.body, req.file);
+    // 1. Check if a file was uploaded to R2
+    let profileImageUrl = null;
+    
+    if (req.file) {
+      // ✅ FIX: Force use of the R2_PUBLIC_URL from .env
+      // This ensures we get the 'pub-...' link instead of the long 'cloudflarestorage' link
+      if (process.env.R2_PUBLIC_URL && req.file.key) {
+        profileImageUrl = `${process.env.R2_PUBLIC_URL}/${req.file.key}`;
+      } else {
+        // Fallback if env var is missing
+        profileImageUrl = req.file.location;
+      }
+    }
+
+    // 2. Send the body data AND the image URL to your service
+    await authService.registerUser(req.body, profileImageUrl);
+    
     res.status(201).json({ message: "User registered successfully. Please check your email to verify your account." });
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -19,56 +35,14 @@ exports.verifyEmail = async (req, res) => {
     
     await authService.verifyEmailToken(token);
     
-    // Return HTML page for better UX
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Email Verified - CareerSync</title>
-        <style>
-          body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f5f5f5; }
-          .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; max-width: 500px; }
-          h1 { color: #4F46E5; margin-bottom: 20px; }
-          p { color: #666; margin-bottom: 30px; }
-          .success { color: #10b981; font-size: 48px; margin-bottom: 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="success">✅</div>
-          <h1>Email Verified Successfully!</h1>
-          <p>Your email has been verified. You can now log in to your account.</p>
-          <p><a href="${process.env.CLIENT_BASE_URL_PUBLIC || 'http://localhost:5173'}/signin" style="color: #4F46E5; text-decoration: none; font-weight: bold;">Go to Login →</a></p>
-        </div>
-      </body>
-      </html>
-    `;
-    res.send(html);
+    // ✅ FIX: Redirect directly to the Frontend Sign In page
+    // This uses the full URL to ensure it jumps to the Student App
+    return res.redirect('https://careersync-4be.ptascloud.online/signin?verified=true');
+
   } catch (err) {
-    const errorHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Verification Failed - CareerSync</title>
-        <style>
-          body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f5f5f5; }
-          .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; max-width: 500px; }
-          h1 { color: #EF4444; margin-bottom: 20px; }
-          p { color: #666; margin-bottom: 30px; }
-          .error { color: #EF4444; font-size: 48px; margin-bottom: 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="error">❌</div>
-          <h1>Verification Failed</h1>
-          <p>${err.message || 'Invalid or expired verification token.'}</p>
-          <p><a href="${process.env.CLIENT_BASE_URL_PUBLIC || 'http://localhost:5173'}/signin" style="color: #4F46E5; text-decoration: none; font-weight: bold;">Go to Login →</a></p>
-        </div>
-      </body>
-      </html>
-    `;
-    res.status(400).send(errorHtml);
+    console.error("Verification error:", err.message);
+    // ❌ ERROR: Redirect to Frontend with error flag
+    return res.redirect('https://careersync-4be.ptascloud.online/signin?error=verification_failed');
   }
 };
 
@@ -88,7 +62,6 @@ exports.login = async (req, res) => {
     res.status(statusCode).json({ message: err.message || "Login failed" });
   }
   console.log("VERIFYING TOKEN WITH:", process.env.JWT_ACCESS_SECRET);
-
 };
 
 exports.refresh = async (req, res) => {
@@ -128,24 +101,22 @@ exports.showResetPasswordForm = async (req, res) => {
     const { User } = require('../models');
     const user = await User.findOne({ where: { reset_token: token } });
     
+    // Use the hardcoded production URL to be safe, or fallback to env
+    const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || 'https://careersync-4be.ptascloud.online';
+
     if (!user) {
-      // Invalid token - redirect to frontend with error
-      const frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
       return res.redirect(`${frontendUrl}/reset/${token}?error=invalid`);
     }
     
     if (user.reset_token_exp && new Date(user.reset_token_exp) < new Date()) {
-      // Expired token - redirect to frontend with error
-      const frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
       return res.redirect(`${frontendUrl}/reset/${token}?error=expired`);
     }
     
     // Valid token - redirect to frontend reset password page
-    const frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
     res.redirect(`${frontendUrl}/reset/${token}`);
   } catch (err) {
     console.error('Error showing reset password form:', err);
-    const frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || 'https://careersync-4be.ptascloud.online';
     res.redirect(`${frontendUrl}/reset?error=invalid`);
   }
 };

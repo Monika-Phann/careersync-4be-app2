@@ -40,14 +40,24 @@ function fail(message, data) {
 function transformProfileData(backendData) {
   const accUser = backendData.AccUser || {}
   
-  // Construct profile image URL
-  const profileImageUrl = accUser.profile_image_url || 
-    (accUser.profile_image ? `https://api-4be.ptascloud.online/uploads/${accUser.profile_image}` : null)
+  // ✅ FIX: Handle R2 URL correctly
+  let profileImageUrl = null;
+  const rawImage = accUser.profile_image_url || accUser.profile_image;
+
+  if (rawImage) {
+    if (rawImage.startsWith('http')) {
+      // It's already a full URL (Cloudflare R2)
+      profileImageUrl = rawImage;
+    } else {
+      // It's a legacy local file
+      profileImageUrl = `https://api-4be.ptascloud.online/uploads/${rawImage}`;
+    }
+  }
   
   // Transform gender: "male" -> "Male", "female" -> "Female"
   const capitalizeFirst = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : ''
   
-  // Transform status: "student" -> "Student", "professional" -> "Working"
+  // Transform status
   const transformStatus = (status) => {
     if (!status) return ''
     const lower = status.toLowerCase()
@@ -106,10 +116,6 @@ function transformProfileForBackend(data) {
 // Profile API Functions
 // ============================================
 
-/**
- * Get user profile
- * GET /api/user/profile
- */
 export async function getUserProfile() {
   try {
     const res = await axiosInstance.get('/api/user/profile')
@@ -120,10 +126,6 @@ export async function getUserProfile() {
   }
 }
 
-/**
- * Update user profile
- * PUT /api/user/profile
- */
 export async function updateUserProfile(data) {
   try {
     const hasFile = data.profileImage instanceof File
@@ -132,30 +134,25 @@ export async function updateUserProfile(data) {
     let config = {}
     
     if (hasFile) {
-      // Create FormData for file upload
       const formData = new FormData()
       const backendData = transformProfileForBackend(data)
       
-      // Append all fields
       Object.keys(backendData).forEach(key => {
         if (backendData[key] != null) {
           formData.append(key, backendData[key])
         }
       })
       
-      // Append file
       formData.append('profileImage', data.profileImage)
       
       payload = formData
       config = {}
     } else {
-      // Regular JSON payload
       payload = transformProfileForBackend(data)
     }
     
     const res = await axiosInstance.put('/api/user/profile', payload, config)
     
-    // Backend returns { message, data }
     const responseData = res.data?.data || res.data
     
     // Transform response if needed
@@ -167,10 +164,6 @@ export async function updateUserProfile(data) {
   }
 }
 
-/**
- * Change password
- * PUT /api/user/change-password
- */
 export async function changePassword(data) {
   try {
     const res = await axiosInstance.put('/api/user/change-password', {
@@ -183,10 +176,6 @@ export async function changePassword(data) {
   }
 }
 
-/**
- * Get user bookings
- * GET /api/user/bookings
- */
 export async function getUserBookings() {
   try {
     const res = await axiosInstance.get('/api/user/bookings')
@@ -196,10 +185,6 @@ export async function getUserBookings() {
   }
 }
 
-/**
- * Get user certificates
- * GET /api/user/certificates
- */
 export async function getUserCertificates() {
   try {
     const res = await axiosInstance.get('/api/user/certificates')
@@ -208,4 +193,3 @@ export async function getUserCertificates() {
     return fail(getErrorMessage(error, 'Failed to load certificates'), error?.response?.data)
   }
 }
-

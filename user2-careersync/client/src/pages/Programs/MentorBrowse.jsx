@@ -7,7 +7,7 @@ import {
   AttachMoney, 
   CheckCircle 
 } from "@mui/icons-material";
-import { InputAdornment, Box, Typography, CircularProgress, Alert } from "@mui/material";
+import { InputAdornment, Box, Typography, CircularProgress } from "@mui/material";
 import { getAllMentors } from "../../services/mentorService";
 import { getAvailableSessions } from "../../services/sessionService";
 import axiosInstance from "../../api/axiosInstance";
@@ -111,9 +111,16 @@ export default function MentorBrowse() {
           const aboutMentor = m?.about_mentor || "No description available for this mentor.";
           const category = m?.Industry?.industry_name || "General";
 
-          const profileImage = m?.profile_image
-            ? `http://localhost:5001/uploads/${m.profile_image}`
-            : (m?.User?.avatar || m?.avatar || "https://via.placeholder.com/150");
+          // ✅ FIX: Handle R2 URL correctly
+          let profileImage = m?.profile_image;
+          if (profileImage) {
+            if (!profileImage.startsWith('http')) {
+               // Legacy fallback
+               profileImage = `https://api-4be.ptascloud.online/uploads/${profileImage}`;
+            }
+          } else {
+             profileImage = m?.User?.avatar || m?.avatar || "https://via.placeholder.com/150";
+          }
 
           const availabilityInfo = id ? mentorAvailability.get(id) : null;
           const availability = availabilityInfo?.hasOpenSlot ? "Available" : "Fully Booked";
@@ -218,7 +225,6 @@ export default function MentorBrowse() {
           filteredMentors.map((mentor) => (
             <MentorCard key={mentor.id}>
               
-              {/* Top: Image + Info (Side by Side) */}
               <CardTopSection>
                 <MentorImageContainer>
                   <img 
@@ -253,17 +259,15 @@ export default function MentorBrowse() {
                 </MentorInfoColumn>
               </CardTopSection>
 
-              {/* Middle: Description */}
               <DescriptionText>
                 {mentor.aboutMentor}
               </DescriptionText>
 
-              {/* Bottom: Buttons */}
               <ButtonContainer>
                 <ViewProfileButton
                   onClick={() => navigate(`/mentor/${mentor.id}`)}
                 >
-                   View Mentor Profile
+                    View Mentor Profile
                 </ViewProfileButton>
                 
                 <RequestButton

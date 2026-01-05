@@ -56,29 +56,32 @@ const sendMail = async (to, subject, html, text) => {
 };
 
 // Send verification email
-// ✅ FIXED: Routes students to Port 5174 (/signin)
 const sendVerificationEmail = async (email, token, role = 'acc_user') => {
   let baseUrl;
-  let loginPath = '/signin'; // Default login path for students
+  let loginPath = '/signin'; 
 
-  // 1. Determine the correct PORT based on Role
+  // 1. Determine the correct URL based on Role (Using PRODUCTION domains)
   if (role === 'admin') {
-    // Admin -> Port 5173
-    baseUrl = process.env.CLIENT_BASE_URL_ADMIN || 'http://localhost:5173';
+    // Admin App
+    baseUrl = process.env.CLIENT_BASE_URL_ADMIN || 'https://admin-4be.ptascloud.online';
   } else if (role === 'mentor') {
-    // Mentor -> Port 5175
-    baseUrl = process.env.CLIENT_BASE_URL_MENTOR || 'http://localhost:5174';
-    loginPath = '/singin'; // Mentors use /login
+    // Mentor App
+    baseUrl = process.env.CLIENT_BASE_URL_MENTOR || 'https://mentor-4be.ptascloud.online';
+    loginPath = '/login'; // Mentors use /login
   } else {
-    // Student / User -> Port 5174 (This is the one you requested!)
-    baseUrl = process.env.CLIENT_BASE_URL_STUDENT || 'http://localhost:5174';
+    // Student / User App
+    // Fallback to your main domain if env var is missing
+    baseUrl = process.env.CLIENT_BASE_URL_STUDENT || 'https://careersync-4be.ptascloud.online'; 
     loginPath = '/signin'; // Students use /signin
   }
 
   // The link specifically for logging in directly
   const loginUrl = `${baseUrl}${loginPath}`;
   
-  // The verification link
+  // The verification link - Points to Frontend which usually calls API
+  // NOTE: If you want this to hit the API directly (like we fixed earlier), 
+  // ensure baseUrl matches the API or the Frontend handles the redirect.
+  // Based on your fix, this should point to the API ideally, OR the frontend route we added.
   const verifyUrl = `${baseUrl}/verify-email?token=${token}&role=${role}`;
   
   const html = `
@@ -116,7 +119,8 @@ const sendVerificationEmail = async (email, token, role = 'acc_user') => {
 
 // Send password reset email
 const sendResetPasswordEmail = async (email, token) => {
-  const base = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || 'http://localhost:5173';
+  // Default to Student App in Production
+  const base = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || 'https://careersync-4be.ptascloud.online';
   const resetLink = `${base}/reset-password?token=${token}`;
   
   const html = `
@@ -144,13 +148,11 @@ const sendResetPasswordEmail = async (email, token) => {
 };
 
 // Send mentor approval email
-// ALWAYS sends notification email when mentor is approved
 const sendMentorApprovalEmail = async (toEmail, firstName) => {
-  // ✅ FIXED: Pointing to MENTOR app (Port 5175)
-  // Logic: Check environment variable first, otherwise default to localhost:5175/login
+  // Default to Mentor App in Production
   const loginUrl = process.env.CLIENT_BASE_URL_MENTOR 
     ? `${process.env.CLIENT_BASE_URL_MENTOR}/login` 
-    : 'http://localhost:5174/signin';
+    : 'https://mentor-4be.ptascloud.online/login';
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">
@@ -199,16 +201,7 @@ const sendMentorApprovalEmail = async (toEmail, firstName) => {
     </div>
   `;
 
-  const text = `Congratulations ${firstName}!
-
-Your mentor application has been APPROVED!
-
-Your account has been activated. You can now log in to your mentor dashboard.
-
-Login URL: ${loginUrl}
-
-Best Regards,
-The CareerSync Team`;
+  const text = `Congratulations ${firstName}!\n\nYour mentor application has been APPROVED!\n\nYour account has been activated. You can now log in to your mentor dashboard.\n\nLogin URL: ${loginUrl}\n\nBest Regards,\nThe CareerSync Team`;
 
   await sendMail(toEmail, '🎉 Congratulations! Your Mentor Application is Approved - CareerSync', html, text);
 };

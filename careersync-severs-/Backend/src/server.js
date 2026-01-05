@@ -9,7 +9,7 @@ const app = express();
 
 // Middleware - Universal CORS Fix
 app.use(cors({
-  origin: true,       // <--- This automatically accepts the incoming website address
+  origin: true,        // Automatically accepts the incoming website address
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
@@ -19,7 +19,31 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ Serve static files for uploads
+// -----------------------------------------------------------
+// 🚨 MAGIC FIX: Auto-repair broken "Double URLs"
+// -----------------------------------------------------------
+// This catches requests like: /uploads/https://pub-....
+// And redirects them to: https://pub-....
+app.use('/uploads', (req, res, next) => {
+  // req.url here is the part AFTER '/uploads'
+  // Example: "/https://pub-..."
+
+  if (req.url.includes('https://') || req.url.includes('http://')) {
+    // Remove the leading slash to get the real absolute URL
+    let realUrl = req.url.startsWith('/') ? req.url.substring(1) : req.url;
+    
+    // Safety check: ensure it's a valid URL string
+    if (realUrl.startsWith('http')) {
+      console.log(`🔀 Fixed broken link! Redirecting to: ${realUrl}`);
+      return res.redirect(301, realUrl);
+    }
+  }
+  
+  // If it's not a broken URL, just continue to normal static files
+  next();
+});
+
+// ✅ Serve static files for uploads (Legacy fallback)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes Imports
@@ -61,7 +85,7 @@ app.get("/api", (req, res) => {
     version: "1.0.0",
     status: "running",
     endpoints: {
-      auth: "/api:/auth",
+      auth: "/api/auth",
       mentors: "/api/mentors",
       sessions: "/api/sessions",
       bookings: "/api/bookings",
@@ -163,7 +187,6 @@ const syncDatabase = async () => {
     // 1. Sync User Table
     if (db.User) {
       try {
-        // 🚨 CHANGED alter: true TO alter: false for stability
         await db.User.sync({ alter: false, logging: false });
         console.log(`✅ User table synchronized`);
       } catch (userErr) {
@@ -176,9 +199,7 @@ const syncDatabase = async () => {
     for (const modelName of syncOrder) {
       if (db[modelName] && modelName !== 'User') {
         try {
-          // 🚨 CHANGED alter: true TO alter: false for stability
           await db[modelName].sync({ alter: false, logging: false });
-          // console.log(`✅ ${modelName} table synchronized`);
         } catch (modelErr) {
           console.error(`⚠️ Error syncing ${modelName}:`, modelErr.message);
         }
