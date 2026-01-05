@@ -60,21 +60,41 @@ const getApiBaseUrl = () => {
     envUrl.toLowerCase().includes(pattern.toLowerCase())
   );
   
-  // Use environment URL if it's valid and not a placeholder
-  if (envUrl && !isPlaceholder && envUrl.startsWith('http')) {
-    // Ensure it ends with /api
-    return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+  // CRITICAL: If placeholder detected, immediately use fallback
+  if (isPlaceholder) {
+    console.error('❌ ERROR: Placeholder API URL detected in environment variable!');
+    console.error('❌ Detected URL:', envUrl);
+    console.error('⚠️ Using fallback API URL. Please update your .env file and rebuild.');
+    
+    // Determine if we're in production
+    const isProduction = import.meta.env.PROD || 
+                        (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1'));
+    
+    if (isProduction) {
+      // Production fallback - UPDATE THIS WITH YOUR ACTUAL API DOMAIN
+      const fallbackUrl = 'https://api.careersync-4be.ptascloud.online/api';
+      console.log('✅ Using production fallback:', fallbackUrl);
+      return fallbackUrl;
+    }
+    
+    // Development fallback
+    return "http://localhost:5001/api";
   }
   
-  // Check if we're in production mode
-  if (import.meta.env.PROD || window.location.hostname !== 'localhost') {
-    // In production but no valid URL - use fallback
-    if (isPlaceholder || !envUrl) {
-      console.error('⚠️ VITE_API_BASE_URL contains placeholder or is missing. Using fallback API URL.');
-      console.error('⚠️ Please update your .env file with the correct API URL and rebuild.');
-    }
-    // Return a default production API URL
-    // TODO: Update this with your actual production API domain
+  // Use environment URL if it's valid and not a placeholder
+  if (envUrl && envUrl.startsWith('http')) {
+    // Ensure it ends with /api
+    const finalUrl = envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+    console.log('✅ Using environment API URL:', finalUrl);
+    return finalUrl;
+  }
+  
+  // No valid URL provided - use fallback based on environment
+  const isProduction = import.meta.env.PROD || 
+                      (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1'));
+  
+  if (isProduction) {
+    console.warn('⚠️ No valid API URL found. Using production fallback.');
     return 'https://api.careersync-4be.ptascloud.online/api';
   }
   
@@ -83,14 +103,24 @@ const getApiBaseUrl = () => {
 };
 
 // Get the API base URL
-const apiBaseUrl = getApiBaseUrl();
+let apiBaseUrl = getApiBaseUrl();
 
-// Log the API URL being used (helpful for debugging)
+// FINAL SAFETY CHECK: Force replace placeholder URLs even if they somehow got through
+if (apiBaseUrl.includes('your-api-domain.com') || apiBaseUrl.includes('your-api-domain')) {
+  console.error('❌ CRITICAL: Placeholder URL detected in final baseURL! Forcing replacement...');
+  const isProduction = typeof window !== 'undefined' && 
+                      window.location.hostname !== 'localhost' && 
+                      !window.location.hostname.includes('127.0.0.1');
+  apiBaseUrl = isProduction 
+    ? 'https://api.careersync-4be.ptascloud.online/api'
+    : 'http://localhost:5001/api';
+  console.log('✅ Forced replacement to:', apiBaseUrl);
+}
+
+// Log the final API URL being used
 if (typeof window !== 'undefined') {
   console.log('🔗 Admin Platform API Base URL:', apiBaseUrl);
-  if (apiBaseUrl.includes('your-api-domain.com')) {
-    console.error('❌ ERROR: Placeholder API URL detected! Please update your .env file and rebuild.');
-  }
+  console.log('📍 Current hostname:', window.location.hostname);
 }
 
 const api = axios.create({
