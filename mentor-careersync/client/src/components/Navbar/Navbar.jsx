@@ -16,7 +16,7 @@ import {
   KeyboardArrowDown as KeyboardArrowDownIcon,
 } from "@mui/icons-material";
 import { NavbarStyles } from "./Navbar.styles";
-import { getUserData, clearAuth } from "../../utils/auth";
+import { getUserData, clearAuth, getStudentPlatformUrl } from "../../utils/auth";
 import axiosInstance from "../../api/axiosInstance";
 
 function Navbar({ pageTitle, pageSubtitle, actionButtons, isMobile, onOpenMobileMenu }) {
@@ -27,7 +27,8 @@ function Navbar({ pageTitle, pageSubtitle, actionButtons, isMobile, onOpenMobile
   const open = Boolean(anchorEl);
 
   const getBaseUrl = () => {
-    const baseURL = axiosInstance.defaults.baseURL || 'http://localhost:5001/api';
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+    const baseURL = axiosInstance.defaults.baseURL || `${API_BASE}/api`;
     return baseURL.replace('/api', '');
   };
 
@@ -100,11 +101,8 @@ function Navbar({ pageTitle, pageSubtitle, actionButtons, isMobile, onOpenMobile
 
   const handleLogout = () => {
     clearAuth();
-    // Redirect to student platform homepage
-    const studentPlatformUrl = 
-      import.meta.env.VITE_CLIENT_BASE_URL_STUDENT ||
-      import.meta.env.VITE_STUDENT_PLATFORM_URL ||
-      'http://localhost:5174';
+    // Redirect to student platform homepage using utility function
+    const studentPlatformUrl = getStudentPlatformUrl();
     window.location.href = studentPlatformUrl;
   };
 

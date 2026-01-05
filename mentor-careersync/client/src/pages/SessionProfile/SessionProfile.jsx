@@ -301,7 +301,9 @@ function SessionProfile() {
         experience: mentor.experience_years?.toString() || '0',
         sessionsCompleted: profileData.sessionsCompleted || '0',
         image: mentor.profile_image 
-          ? `http://localhost:5001/uploads/${mentor.profile_image}` 
+          ? (mentor.profile_image.startsWith('http') 
+              ? mentor.profile_image 
+              : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'}/uploads/${mentor.profile_image}`)
           : (profileData.image || initialMentorData.image),
         about: mentor.about_mentor || '',
         expertise: expertiseArray,
@@ -479,7 +481,9 @@ function SessionProfile() {
           experience: mentor.experience_years?.toString() || '0',
           sessionsCompleted: '0', // This would come from bookings count
           image: mentor.profile_image 
-            ? `http://localhost:5001/uploads/${mentor.profile_image}` 
+            ? (mentor.profile_image.startsWith('http') 
+                ? mentor.profile_image 
+                : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'}/uploads/${mentor.profile_image}`)
             : initialMentorData.image,
           about: mentor.about_mentor || '', // ✅ Fetched from database "About You" field
           expertise: expertiseArray, // ✅ Fetched from database expertise_areas field

@@ -45,8 +45,9 @@ import axiosInstance from '../../api/axiosInstance'
 
 // Helper function to get base URL for image paths
 const getBaseUrl = () => {
-  const baseURL = axiosInstance.defaults.baseURL || 'http://localhost:5001/api'
-  return baseURL.replace('/api', '')
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+  const baseURL = axiosInstance.defaults.baseURL || `${API_BASE}/api`;
+  return baseURL.replace('/api', '');
 }
 
 // Yup validation schemas

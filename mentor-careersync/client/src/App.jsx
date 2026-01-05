@@ -6,6 +6,7 @@ import {
   getUserData,
   setUserData,
   clearAuth,
+  getStudentPlatformUrl,
 } from "./utils/auth";
 import { getMyMentorProfile } from "./api/mentorApi";
 import axiosInstance from "./api/axiosInstance";
@@ -58,10 +59,7 @@ function App() {
             if (userError.response?.status === 401) {
                 clearAuth();
                 // Redirect to student platform homepage
-                const studentPlatformUrl = 
-                  import.meta.env.VITE_CLIENT_BASE_URL_STUDENT ||
-                  import.meta.env.VITE_STUDENT_PLATFORM_URL ||
-                  'http://localhost:5174';
+                const studentPlatformUrl = getStudentPlatformUrl();
                 window.location.href = studentPlatformUrl;
                 return;
             }
@@ -87,10 +85,7 @@ function App() {
         ) {
           clearAuth();
           // Redirect to student platform homepage
-          const studentPlatformUrl = 
-            import.meta.env.VITE_CLIENT_BASE_URL_STUDENT ||
-            import.meta.env.VITE_STUDENT_PLATFORM_URL ||
-            'http://localhost:5174';
+          const studentPlatformUrl = getStudentPlatformUrl();
           window.location.href = studentPlatformUrl;
           return;
         }

@@ -15,7 +15,8 @@ import axiosInstance from '../../api/axiosInstance'
 
 function SessionAgendaModal({ open, onClose, agendaPdfUrl = null }) {
   const getBaseUrl = () => {
-    const baseURL = axiosInstance.defaults.baseURL || 'http://localhost:5001/api';
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+    const baseURL = axiosInstance.defaults.baseURL || `${API_BASE}/api`;
     return baseURL.replace('/api', '');
   };
 

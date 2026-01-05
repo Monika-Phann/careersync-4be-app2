@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getAuthToken, clearAuth } from "../utils/auth";
+import { getAuthToken, clearAuth, getStudentPlatformUrl } from "../utils/auth";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
 // 1. Create axios instance using env-driven base URL
@@ -45,10 +45,7 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401) {
       clearAuth();
       // Redirect to student platform homepage if session expires
-      const studentPlatformUrl = 
-        import.meta.env.VITE_CLIENT_BASE_URL_STUDENT ||
-        import.meta.env.VITE_STUDENT_PLATFORM_URL ||
-        'http://localhost:5174';
+      const studentPlatformUrl = getStudentPlatformUrl();
       window.location.href = studentPlatformUrl;
     }
     return Promise.reject(error);

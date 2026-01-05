@@ -190,7 +190,7 @@ export const formatSessionForDisplay = (session) => {
     agendaPdf: session.agenda_pdf 
       ? (session.agenda_pdf.startsWith('http') 
           ? session.agenda_pdf 
-          : `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/uploads/${session.agenda_pdf}`)
+          : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'}/uploads/${session.agenda_pdf}`)
       : null,
     position: session.Position?.position_name || 'N/A',
     mentor: session.Mentor ? {
