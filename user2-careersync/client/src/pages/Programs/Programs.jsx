@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Container, Typography, CircularProgress, Box } from '@mui/material'
+import { Container, Typography, CircularProgress, Box, Dialog, IconButton } from '@mui/material'
+import { Close as CloseIcon } from '@mui/icons-material'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom';
 import { useAtom } from 'jotai'; // 1. Import useAtom
@@ -21,7 +22,8 @@ import {
   ProgramImage,
 } from './Programs.styles'
 
-const API_URL = 'https://api-4be.ptascloud.online/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+const API_URL = `${API_BASE}/api`;
 
 function Programs({ defaultCategory = 'All Industries' }) {
   const [auth] = useAtom(authAtom); // 3. Initialize auth state
@@ -29,19 +31,40 @@ function Programs({ defaultCategory = 'All Industries' }) {
   const [programs, setPrograms] = useState([])
   const [industries, setIndustries] = useState([])
   const [loading, setLoading] = useState(true)
+  const [industriesLoading, setIndustriesLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [imageModalOpen, setImageModalOpen] = useState(false)
+  const [selectedImage, setSelectedImage] = useState(null)
   const navigate = useNavigate();
+
+  const handleImageClick = (imageUrl) => {
+    setSelectedImage(imageUrl)
+    setImageModalOpen(true)
+  }
+
+  const handleCloseImageModal = () => {
+    setImageModalOpen(false)
+    setSelectedImage(null)
+  }
 
   // Fetch industries from admin section
   useEffect(() => {
     const fetchIndustries = async () => {
       try {
+        setIndustriesLoading(true)
         const response = await axiosInstance.get('/api/industries')
         const industryNames = response.data.map(industry => industry.industry_name)
         setIndustries(industryNames)
+        
+        // Ensure activeCategory is valid - if defaultCategory doesn't match any industry, reset to "All Industries"
+        if (activeCategory !== 'All Industries' && !industryNames.includes(activeCategory)) {
+          setActiveCategory('All Industries')
+        }
       } catch (err) {
         console.error('Error fetching industries:', err)
         setIndustries([])
+      } finally {
+        setIndustriesLoading(false)
       }
     }
 
@@ -85,6 +108,9 @@ function Programs({ defaultCategory = 'All Industries' }) {
   }, [industries])
 
   const filteredPrograms = useMemo(() => {
+    // Wait for both industries and programs to load before filtering
+    if (industriesLoading || loading) return []
+    
     // If no industries are created, don't show any programs
     if (industries.length === 0) return []
     
@@ -94,9 +120,9 @@ function Programs({ defaultCategory = 'All Industries' }) {
     
     if (activeCategory === 'All Industries') return validPrograms
     return validPrograms.filter((item) => item.category === activeCategory)
-  }, [programs, activeCategory, industries])
+  }, [programs, activeCategory, industries, industriesLoading, loading])
 
-  if (loading) {
+  if (loading || industriesLoading) {
     return (
       <Section sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
         <CircularProgress />
@@ -148,7 +174,11 @@ function Programs({ defaultCategory = 'All Industries' }) {
               <Card key={item.id}>
                 <ProgramCardContent>
                   <Badge>{item.category}</Badge>
-                  <ProgramImage src={item.image} alt={item.title} />
+                  <ProgramImage 
+                    src={item.image} 
+                    alt={item.title}
+                    onClick={() => handleImageClick(item.image)}
+                  />
                   <Typography variant="h4" sx={{ mt: 2, fontWeight: 700 }}>
                     {item.title}
                   </Typography>
@@ -179,6 +209,57 @@ function Programs({ defaultCategory = 'All Industries' }) {
           )}
         </ProgramGrid>
       </Container>
+
+      {/* Image Modal */}
+      <Dialog
+        open={imageModalOpen}
+        onClose={handleCloseImageModal}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            backgroundColor: 'transparent',
+            boxShadow: 'none',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+          }
+        }}
+      >
+        <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <IconButton
+            onClick={handleCloseImageModal}
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              color: 'white',
+              zIndex: 1,
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+          {selectedImage && (
+            <Box
+              component="img"
+              src={selectedImage}
+              alt="Full size position image"
+              sx={{
+                maxWidth: '100%',
+                maxHeight: '90vh',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                borderRadius: 2,
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              }}
+            />
+          )}
+        </Box>
+      </Dialog>
     </Section>
   )
 }

@@ -1,5 +1,7 @@
 import axiosInstance from "./axiosInstance";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+
 /**
  * Register a new user
  * @param {Object} data - User registration data
@@ -17,7 +19,7 @@ export const registerUser = async (data) => {
     if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
       return {
         success: false,
-        error: "Cannot connect to server. Please make sure the backend server is running on https://api-4be.ptascloud.online",
+        error: `Cannot connect to server. Please make sure the backend server is running on ${API_BASE}`,
         details: error.response?.data,
       };
     }
@@ -58,7 +60,7 @@ export const loginUser = async (data) => {
     if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
       return {
         success: false,
-        error: "Cannot connect to server. Please make sure the backend server is running on https://api-4be.ptascloud.online",
+        error: `Cannot connect to server. Please make sure the backend server is running on ${API_BASE}`,
         details: error.response?.data,
       };
     }
@@ -87,7 +89,7 @@ export const requestPasswordReset = async (email) => {
     if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
       return {
         success: false,
-        error: "Cannot connect to server. Please make sure the backend server is running on https://api-4be.ptascloud.online",
+        error: `Cannot connect to server. Please make sure the backend server is running on ${API_BASE}`,
         details: error.response?.data,
       };
     }
@@ -122,7 +124,7 @@ export const resetPassword = async (resetToken, newPassword) => {
     if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
       return {
         success: false,
-        error: "Cannot connect to server. Please make sure the backend server is running on https://api-4be.ptascloud.online",
+        error: `Cannot connect to server. Please make sure the backend server is running on ${API_BASE}`,
         details: error.response?.data,
       };
     }

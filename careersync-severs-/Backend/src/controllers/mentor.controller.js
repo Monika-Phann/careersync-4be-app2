@@ -6,11 +6,27 @@ const sessionService = require("../services/session.service");
 exports.registerMentor = async (req, res) => {
   try {
     const mentorData = req.body;
-    const profileImage = req.files?.profile_image?.[0]?.filename || null;
+    
+    // Extract profile image URL from R2 upload
+    let profileImageUrl = null;
+    if (req.files?.profile_image?.[0]) {
+      const file = req.files.profile_image[0];
+      // R2 uploads have 'key' property, use R2_PUBLIC_URL to construct full URL
+      if (process.env.R2_PUBLIC_URL && file.key) {
+        profileImageUrl = `${process.env.R2_PUBLIC_URL}/${file.key}`;
+      } else if (file.location) {
+        // Fallback to location if R2_PUBLIC_URL not set
+        profileImageUrl = file.location;
+      } else if (file.filename) {
+        // Legacy fallback for local uploads
+        profileImageUrl = `${process.env.APP_URL || 'http://localhost:5001'}/uploads/${file.filename}`;
+      }
+    }
+    
     const documents = req.files?.mentor_documents || [];
     const education = req.body.education ? (typeof req.body.education === 'string' ? JSON.parse(req.body.education) : req.body.education) : [];
     
-    const result = await mentorService.registerMentor(mentorData, profileImage, documents, education);
+    const result = await mentorService.registerMentor(mentorData, profileImageUrl, documents, education);
     res.status(201).json({ message: "Mentor registered successfully", ...result });
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -26,11 +42,27 @@ exports.applyAsMentor = async (req, res) => {
     }
     
     const mentorData = req.body;
-    const profileImage = req.files?.profile_image?.[0]?.filename || null;
+    
+    // Extract profile image URL from R2 upload
+    let profileImageUrl = null;
+    if (req.files?.profile_image?.[0]) {
+      const file = req.files.profile_image[0];
+      // R2 uploads have 'key' property, use R2_PUBLIC_URL to construct full URL
+      if (process.env.R2_PUBLIC_URL && file.key) {
+        profileImageUrl = `${process.env.R2_PUBLIC_URL}/${file.key}`;
+      } else if (file.location) {
+        // Fallback to location if R2_PUBLIC_URL not set
+        profileImageUrl = file.location;
+      } else if (file.filename) {
+        // Legacy fallback for local uploads
+        profileImageUrl = `${process.env.APP_URL || 'http://localhost:5001'}/uploads/${file.filename}`;
+      }
+    }
+    
     const documents = req.files?.mentor_documents || [];
     const education = req.body.education ? (typeof req.body.education === 'string' ? JSON.parse(req.body.education) : req.body.education) : [];
     
-    const mentor = await mentorService.applyAsMentor(userId, mentorData, profileImage, documents, education);
+    const mentor = await mentorService.applyAsMentor(userId, mentorData, profileImageUrl, documents, education);
     res.status(201).json({ message: "Application submitted successfully", mentor });
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -156,7 +188,21 @@ exports.updateProfile = async (req, res) => {
     }
     
     const userId = req.user.id;
-    const profileImage = req.file ? req.file.filename : null;
+    
+    // Extract profile image URL from R2 upload
+    let profileImageUrl = null;
+    if (req.file) {
+      // R2 uploads have 'key' property, use R2_PUBLIC_URL to construct full URL
+      if (process.env.R2_PUBLIC_URL && req.file.key) {
+        profileImageUrl = `${process.env.R2_PUBLIC_URL}/${req.file.key}`;
+      } else if (req.file.location) {
+        // Fallback to location if R2_PUBLIC_URL not set
+        profileImageUrl = req.file.location;
+      } else if (req.file.filename) {
+        // Legacy fallback for local uploads
+        profileImageUrl = `${process.env.APP_URL || 'http://localhost:5001'}/uploads/${req.file.filename}`;
+      }
+    }
     
     // ✅ Only include fields that are provided and not empty
     // Important: Don't set required fields to null/empty as they cannot be null in DB
@@ -343,12 +389,12 @@ exports.updateProfile = async (req, res) => {
     let mentor;
     if (education !== null && Array.isArray(education)) {
       updates.education = education;
-      console.log('✅ Calling mentorService.updateProfileWithEducation with:', { userId, updatesCount: Object.keys(updates).length, educationCount: education.length, hasProfileImage: !!profileImage });
-      mentor = await mentorService.updateProfileWithEducation(userId, updates, profileImage);
+      console.log('✅ Calling mentorService.updateProfileWithEducation with:', { userId, updatesCount: Object.keys(updates).length, educationCount: education.length, hasProfileImage: !!profileImageUrl });
+      mentor = await mentorService.updateProfileWithEducation(userId, updates, profileImageUrl);
       console.log('✅ mentorService.updateProfileWithEducation completed successfully');
     } else {
-      console.log('✅ Calling mentorService.updateProfile with:', { userId, updatesCount: Object.keys(updates).length, hasProfileImage: !!profileImage });
-      mentor = await mentorService.updateProfile(userId, updates, profileImage);
+      console.log('✅ Calling mentorService.updateProfile with:', { userId, updatesCount: Object.keys(updates).length, hasProfileImage: !!profileImageUrl });
+      mentor = await mentorService.updateProfile(userId, updates, profileImageUrl);
       console.log('✅ mentorService.updateProfile completed successfully');
     }
     
@@ -551,7 +597,21 @@ exports.updateProfileFull = async (req, res) => {
     }
     
     const userId = req.user.id;
-    const profileImage = req.file ? req.file.filename : null;
+    
+    // Extract profile image URL from R2 upload
+    let profileImageUrl = null;
+    if (req.file) {
+      // R2 uploads have 'key' property, use R2_PUBLIC_URL to construct full URL
+      if (process.env.R2_PUBLIC_URL && req.file.key) {
+        profileImageUrl = `${process.env.R2_PUBLIC_URL}/${req.file.key}`;
+      } else if (req.file.location) {
+        // Fallback to location if R2_PUBLIC_URL not set
+        profileImageUrl = req.file.location;
+      } else if (req.file.filename) {
+        // Legacy fallback for local uploads
+        profileImageUrl = `${process.env.APP_URL || 'http://localhost:5001'}/uploads/${req.file.filename}`;
+      }
+    }
     const updates = req.body;
     
     if (updates.expertise_areas && typeof updates.expertise_areas === 'string') {
@@ -573,7 +633,7 @@ exports.updateProfileFull = async (req, res) => {
     const mentor = await mentorService.updateProfileWithEducation(
       userId, 
       updates, 
-      profileImage
+      profileImageUrl
     );
     
     res.status(200).json({ 

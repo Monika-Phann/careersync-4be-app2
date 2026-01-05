@@ -13,8 +13,8 @@ const {
   sequelize,
 } = require("../models");
 
-const APP_URL =
-  process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+const APP_URL = process.env.APP_URL;
+if (!APP_URL) throw new Error('APP_URL environment variable is required');
 
 // UPDATED: Register mentor (for guests) - NO EMAIL SENT YET
 exports.registerMentor = async (
@@ -68,7 +68,13 @@ exports.registerMentor = async (
     throw new Error("Industry ID or Industry Name is required");
   }
 
-  const exist = await User.findOne({ where: { email } });
+  // ✅ FIX: Use case-insensitive email check for PostgreSQL
+  const exist = await User.findOne({ 
+    where: sequelize.where(
+      sequelize.fn('LOWER', sequelize.col('email')),
+      email.toLowerCase()
+    )
+  });
   if (exist) {
     throw new Error(
       "This email is already registered. One email can only be used on one platform. Please use your existing account or use a different email address."

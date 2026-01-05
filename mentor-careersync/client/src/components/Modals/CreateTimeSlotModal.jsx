@@ -14,13 +14,17 @@ import {
   MenuItem,
 } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import dayjs from 'dayjs'
 import { CreateTimeSlotModalStyles } from './CreateTimeSlotModal.styles'
 import { addTimeslots } from '../../api/timeslotApi'
 import { getMySessions } from '../../api/sessionApi'
 
 function CreateTimeSlotModal({ open, onClose }) {
-  const [startDateTime, setStartDateTime] = useState('')
-  const [endDateTime, setEndDateTime] = useState('')
+  const [startDateTime, setStartDateTime] = useState(null)
+  const [endDateTime, setEndDateTime] = useState(null)
   const [sessions, setSessions] = useState([])
   const [selectedSessionId, setSelectedSessionId] = useState('')
   const [loading, setLoading] = useState(false)
@@ -58,34 +62,14 @@ function CreateTimeSlotModal({ open, onClose }) {
     }
   }
 
-  const parseDateTime = (dateTimeStr) => {
-    // Handle format: "DD/MM/YYYY, HH:MM AM/PM" or ISO format
-    try {
-      // Try parsing as-is first (for ISO format)
-      const parsed = new Date(dateTimeStr)
-      if (!isNaN(parsed.getTime())) {
-        return parsed.toISOString()
-      }
-
-      // Try parsing DD/MM/YYYY, HH:MM AM/PM format
-      const parts = dateTimeStr.split(',')
-      if (parts.length === 2) {
-        const datePart = parts[0].trim()
-        const timePart = parts[1].trim()
-        
-        const [day, month, year] = datePart.split('/')
-        const date = new Date(`${year}-${month}-${day} ${timePart}`)
-        
-        if (!isNaN(date.getTime())) {
-          return date.toISOString()
-        }
-      }
-
-      throw new Error('Invalid date format')
-    } catch (err) {
-      throw new Error('Please use format: DD/MM/YYYY, HH:MM AM/PM')
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      setStartDateTime(null)
+      setEndDateTime(null)
+      setError(null)
     }
-  }
+  }, [open])
 
   const handleSave = async () => {
     // Allow saving even if no session selected (will auto-create using profile data)
@@ -98,11 +82,17 @@ function CreateTimeSlotModal({ open, onClose }) {
       setSaving(true)
       setError(null)
 
-      // Parse date/time strings to ISO format
-      const startTime = parseDateTime(startDateTime)
-      const endTime = parseDateTime(endDateTime)
+      // Convert dayjs objects to ISO format
+      const startTime = startDateTime.toISOString()
+      const endTime = endDateTime.toISOString()
 
-      if (new Date(startTime) >= new Date(endTime)) {
+      if (!startTime || !endTime) {
+        setError('Please enter valid date and time')
+        setSaving(false)
+        return
+      }
+
+      if (startDateTime.isAfter(endDateTime) || startDateTime.isSame(endDateTime)) {
         setError('End time must be after start time')
         setSaving(false)
         return
@@ -133,15 +123,16 @@ function CreateTimeSlotModal({ open, onClose }) {
   }
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      PaperProps={{
-        sx: CreateTimeSlotModalStyles.dialogPaper,
-      }}
-    >
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: CreateTimeSlotModalStyles.dialogPaper,
+        }}
+      >
       <DialogTitle sx={CreateTimeSlotModalStyles.dialogTitle}>
         <Typography variant="h6" sx={CreateTimeSlotModalStyles.title}>
           Create New Time Slots
@@ -187,25 +178,33 @@ function CreateTimeSlotModal({ open, onClose }) {
                 No existing sessions found. A new session will be created automatically using your profile's session rate and location.
               </Alert>
             ) : null}
-            <TextField
-              fullWidth
+            <DateTimePicker
               label="Start Date & Time"
               value={startDateTime}
-              onChange={(e) => setStartDateTime(e.target.value)}
-              sx={CreateTimeSlotModalStyles.textField}
-              placeholder="DD/MM/YYYY, HH:MM AM/PM"
-              required
-              helperText="Format: DD/MM/YYYY, HH:MM AM/PM (e.g., 23/12/2025, 10:00 AM)"
+              onChange={(newValue) => setStartDateTime(newValue)}
+              minDateTime={dayjs()}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  required: true,
+                  sx: CreateTimeSlotModalStyles.textField,
+                  helperText: "Select the start date and time for your time slot"
+                }
+              }}
             />
-            <TextField
-              fullWidth
+            <DateTimePicker
               label="End Date & Time"
               value={endDateTime}
-              onChange={(e) => setEndDateTime(e.target.value)}
-              sx={CreateTimeSlotModalStyles.textField}
-              placeholder="DD/MM/YYYY, HH:MM AM/PM"
-              required
-              helperText="Format: DD/MM/YYYY, HH:MM AM/PM (e.g., 23/12/2025, 11:00 AM)"
+              onChange={(newValue) => setEndDateTime(newValue)}
+              minDateTime={startDateTime || dayjs()}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  required: true,
+                  sx: CreateTimeSlotModalStyles.textField,
+                  helperText: "Select the end date and time for your time slot"
+                }
+              }}
             />
             {error && selectedSessionId && (
               <Alert severity="error" sx={{ mt: 2 }}>
@@ -234,6 +233,7 @@ function CreateTimeSlotModal({ open, onClose }) {
         </Button>
       </DialogActions>
     </Dialog>
+    </LocalizationProvider>
   )
 }
 

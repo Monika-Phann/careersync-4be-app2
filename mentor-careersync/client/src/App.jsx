@@ -57,7 +57,9 @@ function App() {
             // If token is invalid, clear it
             if (userError.response?.status === 401) {
                 clearAuth();
-                window.location.href = "/login";
+                // Redirect to student platform homepage
+                const studentPlatformUrl = import.meta.env.VITE_STUDENT_PLATFORM_URL || 'http://localhost:5174';
+                window.location.href = studentPlatformUrl;
                 return;
             }
           }
@@ -70,6 +72,8 @@ function App() {
                 Mentor: profileResponse.mentor,
               };
               setUserData(updatedUserData);
+              // Dispatch event to notify Navbar
+              window.dispatchEvent(new CustomEvent('profileUpdated'));
             }
           }
         }
@@ -79,7 +83,9 @@ function App() {
           error.response?.status === 403
         ) {
           clearAuth();
-          window.location.href = "/login";
+          // Redirect to student platform homepage
+          const studentPlatformUrl = import.meta.env.VITE_STUDENT_PLATFORM_URL || 'http://localhost:5174';
+          window.location.href = studentPlatformUrl;
           return;
         }
       }

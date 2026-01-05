@@ -188,7 +188,9 @@ export const formatSessionForDisplay = (session) => {
     location: session.location_name || 'TBD',
     price: `$${parseFloat(session.price || 0).toFixed(0)}`,
     agendaPdf: session.agenda_pdf 
-      ? `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/uploads/${session.agenda_pdf}`
+      ? (session.agenda_pdf.startsWith('http') 
+          ? session.agenda_pdf 
+          : `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/uploads/${session.agenda_pdf}`)
       : null,
     position: session.Position?.position_name || 'N/A',
     mentor: session.Mentor ? {

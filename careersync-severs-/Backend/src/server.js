@@ -173,6 +173,8 @@ const syncDatabase = async () => {
       'Position', 
       'Admin', 
       'Mentor', 
+      'MentorDocument',    // Mentor-related tables
+      'MentorEducation',   // Mentor-related tables
       'AccUser', 
       'Session', 
       'ScheduleTimeslot', 
@@ -219,7 +221,7 @@ syncDatabase().then(() => {
   const PORT = process.env.PORT || 5001;
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📍 API available at http://localhost:${PORT}/api`);
+    console.log(`📍 API available at ${process.env.APP_URL || `http://localhost:${PORT}`}/api`);
   });
 }).catch((err) => {
   console.error('❌ Failed to start server:', err);

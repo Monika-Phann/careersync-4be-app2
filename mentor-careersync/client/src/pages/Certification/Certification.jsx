@@ -10,8 +10,6 @@ import {
   Grid,
   Chip,
   IconButton,
-  Dialog,
-  DialogContent,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -25,11 +23,11 @@ import {
   AccountCircle as AccountCircleIcon,
   ContentCopy as CopyIcon,
   AccessTime as AccessTimeIcon,
-  Close as CloseIcon,
 } from "@mui/icons-material";
 import { CertificationStyles } from "./Certification.styles";
 import { getMyCertificates } from "../../services/bookingApi";
 import { CircularProgress, Alert } from "@mui/material";
+import CertificatePreview from "../../components/CertificatePreview/CertificatePreview";
 
 function Certification() {
   const [certificates, setCertificates] = useState([]);
@@ -130,8 +128,35 @@ function Certification() {
     fetchCertificates();
   }, []);
 
+  // Format date for certificate display
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch {
+      return dateString;
+    }
+  };
+
+  // Calculate hours from duration string
+  const parseDuration = (durationStr) => {
+    if (!durationStr || durationStr === 'N/A') return 'N/A';
+    return durationStr;
+  };
+
   const handleView = (certificate) => {
-    setSelectedCertificate(certificate);
+    // Format certificate data to match CertificatePreview component expectations
+    const formattedCert = {
+      date: formatDate(certificate.issueDate || certificate.rawCertificate?.issue_date),
+      name: certificate.studentName,
+      title: certificate.programName,
+      organization: 'CareerSync',
+      duration: parseDuration(certificate.duration),
+      mentorName: certificate.mentorName,
+      verifyId: certificate.certificateNumber || certificate.rawCertificate?.certificate_number || certificate.id
+    };
+    setSelectedCertificate(formattedCert);
     setPreviewOpen(true);
   };
 
@@ -343,121 +368,14 @@ function Certification() {
         </Grid>
       )}
 
-      <Dialog
+      <CertificatePreview
         open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{ sx: CertificationStyles.previewDialogPaper }}
-      >
-        <DialogContent sx={CertificationStyles.previewDialogContent}>
-          <IconButton
-            onClick={() => setPreviewOpen(false)}
-            sx={CertificationStyles.previewCloseButton}
-            size="small"
-          >
-            <CloseIcon />
-          </IconButton>
-
-          {selectedCertificate && (
-            <Box sx={CertificationStyles.certificatePreview}>
-              <Box sx={CertificationStyles.certificateBody}>
-                <Box sx={CertificationStyles.previewLeft}>
-                  <Box sx={CertificationStyles.previewLogoRow}>
-                    <Box
-                      component="img"
-                      src="/logo/careersyncLogo.svg"
-                      alt="CareerSync"
-                      sx={CertificationStyles.previewLogo}
-                    />
-                  </Box>
-
-                  <Typography sx={CertificationStyles.previewDate}>
-                    {selectedCertificate.issueDate || selectedCertificate.startDate}
-                  </Typography>
-
-                  <Typography sx={CertificationStyles.previewStudentName}>
-                    {selectedCertificate.studentName}
-                  </Typography>
-                  <Typography sx={CertificationStyles.previewSubtext}>
-                    has successfully completed
-                  </Typography>
-                  <Typography sx={CertificationStyles.previewProgramName}>
-                    {selectedCertificate.programName}
-                  </Typography>
-                  <Typography sx={CertificationStyles.previewMentor}>
-                    a job shadowing program from{" "}
-                    {selectedCertificate.mentorName}
-                  </Typography>
-
-                  <Box sx={CertificationStyles.previewSignatureBlock}>
-                    <Box sx={CertificationStyles.previewSignatureLine} />
-                    <Typography sx={CertificationStyles.previewSignatureName}>
-                      {selectedCertificate.mentorName || "Mentor"}
-                    </Typography>
-                    <Typography sx={CertificationStyles.previewSignatureTitle}>
-                      Program Director, CareerSync
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Box sx={CertificationStyles.previewRight}>
-                  <Typography sx={CertificationStyles.previewRightTitleTop}>
-                    J O B&nbsp;&nbsp;S H A D O W I N G
-                  </Typography>
-                  <Typography sx={CertificationStyles.previewRightTitle}>
-                    CERTIFICATE
-                  </Typography>
-
-                  <Box sx={CertificationStyles.previewSeal}>
-                    <Box sx={CertificationStyles.previewSealOuterRing}>
-                      <Typography sx={CertificationStyles.previewSealOuterText}>
-                        EDUCATION FOR
-                        <br />
-                        EVERYONE
-                      </Typography>
-
-                      <Box sx={CertificationStyles.previewSealInnerRing}>
-                        <Typography sx={CertificationStyles.previewSealBrand}>
-                          CAREERSYNC
-                        </Typography>
-                        <Typography
-                          sx={CertificationStyles.previewSealRingText}
-                        >
-                          JOB SHADOWING
-                        </Typography>
-                        <Typography
-                          sx={CertificationStyles.previewSealRingText}
-                        >
-                          CERTIFICATE
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Box>
-                </Box>
-              </Box>
-
-              <Box sx={CertificationStyles.certificateFooter}>
-                <Typography sx={CertificationStyles.previewFooterNote}>
-                  CareerSync has confirmed the identity of this individual and
-                  their participation in the program.
-                </Typography>
-
-                <Box sx={CertificationStyles.previewFooterVerify}>
-                  <Typography sx={CertificationStyles.previewVerify}>
-                    Verify at:
-                  </Typography>
-                  <Typography sx={CertificationStyles.previewVerifyLink}>
-                    careersync.com/
-                    <br />
-                    verify/000000001
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-      </Dialog>
+        certificate={selectedCertificate}
+        onClose={() => {
+          setPreviewOpen(false);
+          setSelectedCertificate(null);
+        }}
+      />
     </Box>
   );
 }

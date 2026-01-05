@@ -2,7 +2,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const { User, Mentor } = require("../models");
+const { User, Mentor, sequelize } = require("../models");
 const { Op } = require("sequelize");
 const sendEmail = require("../utils/sendEmail");
 const path = require("path");
@@ -12,7 +12,8 @@ const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 const ACCESS_EXPIRES = process.env.JWT_ACCESS_TOKEN_EXPIRES_IN || "15m";
 const REFRESH_EXPIRES = process.env.JWT_REFRESH_TOKEN_EXPIRES_IN || "7d";
-const APP_URL = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+const APP_URL = process.env.APP_URL;
+if (!APP_URL) throw new Error('APP_URL environment variable is required');
 
 function generateToken(payload, secret, expiresIn) {
   return jwt.sign(payload, secret, { expiresIn });
@@ -24,8 +25,8 @@ exports.register = async (req, res) => {
   try {
     let { email, password, role, firstname,lastname, phone, gender,currentstatus, dob, institution, profileImage } = req.body;
 
-    // 1. Trim all string fields
-    email = email?.trim();
+    // 1. Trim all string fields and lowercase email
+    email = email?.toLowerCase().trim();
     firstname = firstname?.trim();
     lastname = lastname?.trim();
     password = password?.trim();
@@ -44,7 +45,13 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "email and password are required" });
     }
 
-    const exist = await User.findOne({ where: { email } });
+    // ✅ FIX: Use case-insensitive email check for PostgreSQL
+    const exist = await User.findOne({ 
+      where: sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('email')),
+        email.toLowerCase()
+      )
+    });
     if (exist) return res.status(400).json({ message: "Email already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);

@@ -17,6 +17,7 @@ import {
 } from "@mui/icons-material";
 import { NavbarStyles } from "./Navbar.styles";
 import { getUserData, clearAuth } from "../../utils/auth";
+import axiosInstance from "../../api/axiosInstance";
 
 function Navbar({ pageTitle, pageSubtitle, actionButtons, isMobile, onOpenMobileMenu }) {
   const navigate = useNavigate();
@@ -25,7 +26,12 @@ function Navbar({ pageTitle, pageSubtitle, actionButtons, isMobile, onOpenMobile
   const [mentorAvatar, setMentorAvatar] = React.useState(null);
   const open = Boolean(anchorEl);
 
-  useEffect(() => {
+  const getBaseUrl = () => {
+    const baseURL = axiosInstance.defaults.baseURL || 'http://localhost:5001/api';
+    return baseURL.replace('/api', '');
+  };
+
+  const loadMentorData = () => {
     // Get mentor data from localStorage or fetch from API
     const userData = getUserData();
     if (userData) {
@@ -34,16 +40,54 @@ function Navbar({ pageTitle, pageSubtitle, actionButtons, isMobile, onOpenMobile
         const fullName = `${mentor.first_name || ''} ${mentor.last_name || ''}`.trim();
         setMentorName(fullName || 'Mentor');
         if (mentor.profile_image) {
-          setMentorAvatar(`http://localhost:5001/uploads/${mentor.profile_image}`);
+          // Check if it's already a full URL (R2 URL or other external URL)
+          const avatarUrl = mentor.profile_image.startsWith('http') 
+            ? mentor.profile_image 
+            : `${getBaseUrl()}/uploads/${mentor.profile_image}`;
+          setMentorAvatar(avatarUrl);
+        } else {
+          setMentorAvatar(null);
         }
       } else if (userData.firstName || userData.first_name) {
         const name = userData.firstName || userData.first_name || 'Mentor';
         setMentorName(name);
-        if (userData.avatar || userData.profileImage) {
-          setMentorAvatar(userData.avatar || userData.profileImage);
+        if (userData.avatar || userData.profileImage || userData.profile_image) {
+          const avatarUrl = userData.avatar || userData.profileImage || userData.profile_image;
+          // Check if it's already a full URL
+          const finalUrl = avatarUrl.startsWith('http') 
+            ? avatarUrl 
+            : avatarUrl;
+          setMentorAvatar(finalUrl);
+        } else {
+          setMentorAvatar(null);
         }
       }
     }
+  };
+
+  useEffect(() => {
+    loadMentorData();
+    
+    // Listen for storage changes (when profile is updated in Settings)
+    const handleStorageChange = (e) => {
+      if (e.key === 'user') {
+        loadMentorData();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also listen for custom event that can be dispatched when profile is updated
+    const handleProfileUpdate = () => {
+      loadMentorData();
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
   }, []);
 
   const handleClick = (event) => {
@@ -56,7 +100,9 @@ function Navbar({ pageTitle, pageSubtitle, actionButtons, isMobile, onOpenMobile
 
   const handleLogout = () => {
     clearAuth();
-    window.location.href = 'http://localhost:5173/signin';
+    // Redirect to student platform homepage
+    const studentPlatformUrl = import.meta.env.VITE_STUDENT_PLATFORM_URL || 'http://localhost:5174';
+    window.location.href = studentPlatformUrl;
   };
 
   return (

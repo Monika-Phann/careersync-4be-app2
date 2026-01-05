@@ -46,7 +46,8 @@ import {
   CheckboxRow,
 } from "./MentorRegister.styles";
 
-const API_URL = 'https://api-4be.ptascloud.online/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+const API_URL = `${API_BASE}/api`;
 
 // Yup validation schema for mentor registration
 const mentorRegisterSchema = yup.object({

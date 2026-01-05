@@ -240,6 +240,25 @@ export const SessionProfileStyles = {
     flexDirection: 'column',
     gap: '12px',
     marginBottom: '16px',
+    maxHeight: '500px', // Approximately 5 sessions tall
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    paddingRight: '8px',
+    // Custom scrollbar styling
+    '&::-webkit-scrollbar': {
+      width: '8px',
+    },
+    '&::-webkit-scrollbar-track': {
+      background: '#f1f1f1',
+      borderRadius: '4px',
+    },
+    '&::-webkit-scrollbar-thumb': {
+      background: '#c1c1c1',
+      borderRadius: '4px',
+      '&:hover': {
+        background: '#a8a8a8',
+      },
+    },
   },
   sessionSlot: {
     padding: '16px',

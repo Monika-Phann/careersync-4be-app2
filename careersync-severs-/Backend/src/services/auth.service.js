@@ -1,7 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const { User, AccUser, Admin, Mentor } = require("../models");
+const { User, AccUser, Admin, Mentor, sequelize } = require("../models");
 const sendEmail = require("../utils/sendEmail");
 const { Op } = require("sequelize");
 
@@ -9,7 +9,8 @@ const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 const ACCESS_EXPIRES = process.env.JWT_ACCESS_TOKEN_EXPIRES_IN || "15m";
 const REFRESH_EXPIRES = process.env.JWT_REFRESH_TOKEN_EXPIRES_IN || "7d";
-const APP_URL = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
+const APP_URL = process.env.APP_URL;
+if (!APP_URL) throw new Error('APP_URL environment variable is required');
 
 function generateToken(payload, secret, expiresIn) {
   return jwt.sign(payload, secret, {
@@ -54,8 +55,21 @@ async function registerUser(data, fileUrl) {
 
   if (!email || !password) throw new Error("email and password are required");
 
-  const exist = await User.findOne({ where: { email } });
-  if (exist) throw new Error("Email already exists");
+  // ✅ FIX: Use case-insensitive email check for PostgreSQL
+  console.log('🔍 Checking if email exists:', email.toLowerCase());
+  const exist = await User.findOne({ 
+    where: sequelize.where(
+      sequelize.fn('LOWER', sequelize.col('email')),
+      email.toLowerCase()
+    )
+  });
+  
+  if (exist) {
+    console.log('❌ Email found in database:', exist.email, '| ID:', exist.id, '| Created:', exist.createdAt);
+    throw new Error("Email already exists");
+  }
+  
+  console.log('✅ Email not found, proceeding with registration');
 
   const hashedPassword = await bcrypt.hash(password, 10);
   const verifyToken = crypto.randomBytes(32).toString("hex");
@@ -86,13 +100,12 @@ async function registerUser(data, fileUrl) {
     });
   }
 
-  // ✅ FIX: Use the Frontend URL for verification link so it doesn't hit the API directly
-  const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || 'https://careersync-4be.ptascloud.online';
+  // ✅ Use the Frontend URL for verification link
+  const frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
+  if (!frontendUrl) throw new Error('CLIENT_BASE_URL_PUBLIC or FRONTEND_URL environment variable is required');
   
-  // Note: We point to the API endpoint here because it handles the logic and redirects
-  // Or we can point to frontend if you have a verify page. 
-  // Let's keep it pointing to the API which we fixed to redirect to /signin
-  const verifyUrl = `${process.env.APP_URL || 'https://api-4be.ptascloud.online'}/api/auth/verify/${verifyToken}`;
+  // Point to the API endpoint which handles verification logic and redirects
+  const verifyUrl = `${APP_URL}/api/auth/verify/${verifyToken}`;
   
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px;">
@@ -131,8 +144,12 @@ async function loginUser(email, password) {
 
   email = email.toLowerCase().trim();
 
+  // ✅ FIX: Use case-insensitive email check for PostgreSQL
   const user = await User.findOne({
-    where: { email },
+    where: sequelize.where(
+      sequelize.fn('LOWER', sequelize.col('User.email')),
+      email.toLowerCase()
+    ),
     include: [
       { model: Admin, attributes: ["id", "full_name", "phone", "profile_image"], required: false },
       { model: Mentor, attributes: ["id", "first_name", "last_name", "profile_image", "approval_status"], required: false },
@@ -189,7 +206,13 @@ async function resetPasswordRequest(email) {
   if (!email) throw new Error("Email required");
   email = email.toLowerCase().trim();
 
-  const user = await User.findOne({ where: { email } });
+  // ✅ FIX: Use case-insensitive email check for PostgreSQL
+  const user = await User.findOne({ 
+    where: sequelize.where(
+      sequelize.fn('LOWER', sequelize.col('email')),
+      email.toLowerCase()
+    )
+  });
   if (!user) return; // Silent return for security
 
   const resetToken = crypto.randomBytes(32).toString("hex");
@@ -200,8 +223,9 @@ async function resetPasswordRequest(email) {
     reset_token_exp: resetExp,
   });
 
-  // ✅ FIX: Ensure this points to the Student Frontend, not the API
-  const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || 'https://careersync-4be.ptascloud.online';
+  // ✅ Point to the Student Frontend for password reset
+  const frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
+  if (!frontendUrl) throw new Error('CLIENT_BASE_URL_PUBLIC or FRONTEND_URL environment variable is required');
   const resetUrl = `${frontendUrl}/reset/${resetToken}`;
   
   const html = `

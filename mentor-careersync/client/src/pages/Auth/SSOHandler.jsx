@@ -19,8 +19,8 @@ const SSOHandler = () => {
       window.location.href = '/'; 
     } else {
       console.error("SSO: No token found");
-      // If failed, send back to User Login
-      window.location.href = 'https://ptascloud.online/login';
+      // If failed, send back to local login
+      window.location.href = '/login';
     }
   }, [searchParams, navigate]);
 

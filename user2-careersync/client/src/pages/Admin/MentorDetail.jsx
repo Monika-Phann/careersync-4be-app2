@@ -307,7 +307,7 @@ const MentorDetail = () => {
                     <Typography>
                       <strong>{doc.document_type}:</strong>{' '}
                       <a
-                        href={`https://api-4be.ptascloud.online/uploads/${doc.document_path}`}
+                        href={`${(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001').replace(/\/api\/?$/, '')}/uploads/${doc.document_path}`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >

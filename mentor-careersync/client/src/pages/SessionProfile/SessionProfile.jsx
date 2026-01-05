@@ -1358,6 +1358,31 @@ function SessionProfile() {
       <SessionAgendaModal
         open={agendaModalOpen}
         onClose={() => setAgendaModalOpen(false)}
+        agendaPdfUrl={(() => {
+          // Get the most recent session with an agenda PDF
+          if (allSessions && allSessions.length > 0) {
+            // allSessions contains raw session data from backend
+            // Sort by created_at DESC to get most recent first, then find first with agenda_pdf
+            const sortedSessions = [...allSessions].sort((a, b) => {
+              const dateA = new Date(a.created_at || a.createdAt || 0);
+              const dateB = new Date(b.created_at || b.createdAt || 0);
+              return dateB - dateA;
+            });
+            
+            // Find first session with agenda_pdf (check raw data structure)
+            const sessionWithAgenda = sortedSessions.find(s => {
+              // Check if agenda_pdf exists in raw session data
+              return s.agenda_pdf && s.agenda_pdf.trim() !== '';
+            });
+            
+            if (sessionWithAgenda && sessionWithAgenda.agenda_pdf) {
+              // Return the agenda_pdf URL
+              // It should be a full URL (R2) or filename (legacy)
+              return sessionWithAgenda.agenda_pdf;
+            }
+          }
+          return null;
+        })()}
       />
     </Box>
   )

@@ -72,13 +72,33 @@ const profileValidationSchema = yup.object({
     .string()
     .trim()
     .required('Phone number is required')
-    .matches(/^[0-9+\-\s()]+$/, 'Please enter a valid phone number')
-    .min(10, 'Phone number must be at least 10 digits'),
+    .test('phone-format', 'Please enter a valid phone number', function(value) {
+      if (!value) return false;
+      const trimmed = value.trim();
+      // Allow phone numbers starting with +855 (Cambodia country code)
+      if (trimmed.startsWith('+855')) {
+        // After +855, should have 8-9 digits (total 12-13 characters)
+        const digitsAfter = trimmed.replace(/\+855/g, '').replace(/\D/g, '');
+        return digitsAfter.length >= 8 && digitsAfter.length <= 9;
+      }
+      // Allow phone numbers starting with 0 (local format)
+      if (trimmed.startsWith('0')) {
+        // Should have 9-10 digits total (including the leading 0)
+        const digits = trimmed.replace(/\D/g, '');
+        return digits.length >= 9 && digits.length <= 10;
+      }
+      // Allow other formats (international without +855, or other local formats)
+      // Must have at least 8 digits
+      const digits = trimmed.replace(/\D/g, '');
+      return digits.length >= 8 && /^[\d+\-\s()]+$/.test(trimmed);
+    }),
   gender: yup
     .string()
-    .oneOf(['male', 'female', 'other'], 'Please select a valid gender'),
+    .nullable()
+    .oneOf(['male', 'female', 'other', null], 'Please select a valid gender'),
   dob: yup
     .string()
+    .nullable()
     .required('Date of birth is required'),
   jobTitle: yup
     .string()
@@ -89,6 +109,7 @@ const profileValidationSchema = yup.object({
   companyName: yup
     .string()
     .trim()
+    .nullable()
     .max(100, 'Company name must be less than 100 characters'),
   experienceYears: yup
     .number()
@@ -98,15 +119,27 @@ const profileValidationSchema = yup.object({
   expertiseAreas: yup
     .string()
     .trim()
+    .nullable()
     .max(500, 'Expertise areas must be less than 500 characters'),
   aboutMentor: yup
     .string()
     .trim()
+    .nullable()
     .max(1000, 'About section must be less than 1000 characters'),
   socialMedia: yup
     .string()
     .trim()
-    .url('Please enter a valid URL')
+    .nullable()
+    .test('url-or-empty', 'Please enter a valid URL', function(value) {
+      // Allow empty string or null, but if provided, must be valid URL
+      if (!value || value.trim() === '') return true
+      try {
+        new URL(value)
+        return true
+      } catch {
+        return false
+      }
+    })
     .max(255, 'Social media URL must be less than 255 characters'),
   sessionRate: yup
     .number()
@@ -116,6 +149,7 @@ const profileValidationSchema = yup.object({
   meetingLocation: yup
     .string()
     .trim()
+    .nullable()
     .max(255, 'Meeting location must be less than 255 characters'),
 })
 
@@ -332,9 +366,19 @@ function Settings() {
       setSaveSuccess(null)
       setProfileErrors({})
       
+      // Prepare data for validation - normalize empty strings to null for optional fields
+      const dataToValidate = {
+        ...accountData,
+        socialMedia: (accountData.socialMedia && accountData.socialMedia.trim()) || null,
+        companyName: (accountData.companyName && accountData.companyName.trim()) || null,
+        expertiseAreas: (accountData.expertiseAreas && accountData.expertiseAreas.trim()) || null,
+        aboutMentor: (accountData.aboutMentor && accountData.aboutMentor.trim()) || null,
+        meetingLocation: (accountData.meetingLocation && accountData.meetingLocation.trim()) || null,
+      }
+      
       // Validate all fields
       try {
-        await profileValidationSchema.validate(accountData, { abortEarly: false })
+        await profileValidationSchema.validate(dataToValidate, { abortEarly: false })
       } catch (validationError) {
         const errors = {}
         validationError.inner.forEach((err) => {
@@ -348,22 +392,22 @@ function Settings() {
         return
       }
 
-      // Prepare data for API - include all fields
+      // Prepare data for API - include all fields (use validated data)
       const updateData = {
-        firstName: accountData.firstName || '',
-        lastName: accountData.lastName || '',
-        email: accountData.email || '',
-        phoneNumber: accountData.phoneNumber || '',
-        gender: accountData.gender || '',
-        dob: accountData.dob || '',
-        jobTitle: accountData.jobTitle || '',
-        companyName: accountData.companyName || '',
-        experienceYears: accountData.experienceYears || null,
-        expertiseAreas: accountData.expertiseAreas || '',
-        aboutMentor: accountData.aboutMentor || '',
-        socialMedia: accountData.socialMedia || '',
-        sessionRate: accountData.sessionRate || null,
-        meetingLocation: accountData.meetingLocation || '',
+        firstName: dataToValidate.firstName || '',
+        lastName: dataToValidate.lastName || '',
+        email: dataToValidate.email || '',
+        phoneNumber: dataToValidate.phoneNumber || '',
+        gender: dataToValidate.gender || '',
+        dob: dataToValidate.dob || '',
+        jobTitle: dataToValidate.jobTitle || '',
+        companyName: dataToValidate.companyName || null,
+        experienceYears: dataToValidate.experienceYears || null,
+        expertiseAreas: dataToValidate.expertiseAreas || null,
+        aboutMentor: dataToValidate.aboutMentor || null,
+        socialMedia: dataToValidate.socialMedia || null,
+        sessionRate: dataToValidate.sessionRate || null,
+        meetingLocation: dataToValidate.meetingLocation || null,
       }
 
       // Handle position and industry if they're objects (UUIDs, not integers)
@@ -436,6 +480,24 @@ function Settings() {
       setImagePreview(profileImageUrl)
       setIsEditMode(false)
       setSaveSuccess('Profile updated successfully!')
+
+      // Update localStorage with new profile image so Navbar can refresh
+      try {
+        const { getUserData, setUserData } = await import('../../utils/auth')
+        const userData = getUserData()
+        if (userData) {
+          if (userData.Mentor) {
+            userData.Mentor.profile_image = mentor.profile_image || userData.Mentor.profile_image
+            userData.Mentor.first_name = mentor.first_name || mentor.firstName || userData.Mentor.first_name
+            userData.Mentor.last_name = mentor.last_name || mentor.lastName || userData.Mentor.last_name
+          }
+          setUserData(userData)
+          // Dispatch custom event to notify Navbar
+          window.dispatchEvent(new CustomEvent('profileUpdated'))
+        }
+      } catch (err) {
+        console.warn('Failed to update localStorage:', err)
+      }
 
       // Refresh profile data from server to ensure consistency
       const refreshResponse = await getMyMentorProfile()

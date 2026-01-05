@@ -1,5 +1,7 @@
 import axiosInstance from '../api/axiosInstance'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+
 function ok(data, message) {
   return { success: true, data, message: message || '' }
 }
@@ -10,7 +12,7 @@ function fail(message, data) {
 
 function getErrorMessage(error, fallbackMessage) {
   if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
-    return 'Cannot connect to server. Please make sure the backend server is running on https://api-4be.ptascloud.online'
+    return `Cannot connect to server. Please make sure the backend server is running on ${API_BASE}`
   }
   const errorData = error?.response?.data
   return errorData?.message || errorData?.error || error?.message || fallbackMessage

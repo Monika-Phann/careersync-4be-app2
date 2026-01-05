@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   Grid,
@@ -28,6 +28,7 @@ import UpdateScheduleModal from '../../components/Modals/UpdateScheduleModal'
 import UpdateContactModal from '../../components/Modals/UpdateContactModal'
 import SessionAgendaModal from '../../components/Modals/SessionAgendaModal'
 import { OverallScheduleStyles } from './OverallSchedule.styles'
+import { getMySessions, formatSessionForDisplay } from '../../api/sessionApi'
 
 const mentorData = {
   name: 'Sarah Chen',
@@ -69,6 +70,27 @@ function OverallSchedule({ initialModal = null }) {
   const [scheduleModalOpen, setScheduleModalOpen] = useState(initialModal === 'schedule')
   const [contactModalOpen, setContactModalOpen] = useState(initialModal === 'contact')
   const [agendaModalOpen, setAgendaModalOpen] = useState(initialModal === 'agenda')
+  const [agendaPdfUrl, setAgendaPdfUrl] = useState(null)
+
+  // Fetch sessions to get agenda PDF
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const result = await getMySessions()
+        if (result.success && result.data && result.data.length > 0) {
+          // Find first session with agenda PDF
+          const sessionWithAgenda = result.data.find(s => s.agenda_pdf)
+          if (sessionWithAgenda) {
+            const formattedSession = formatSessionForDisplay(sessionWithAgenda)
+            setAgendaPdfUrl(formattedSession.agendaPdf || null)
+          }
+        }
+      } catch (err) {
+        // Silently handle error
+      }
+    }
+    fetchSessions()
+  }, [])
 
   return (
     <Box sx={OverallScheduleStyles.container}>
@@ -301,6 +323,7 @@ function OverallSchedule({ initialModal = null }) {
       <SessionAgendaModal
         open={agendaModalOpen}
         onClose={() => setAgendaModalOpen(false)}
+        agendaPdfUrl={agendaPdfUrl}
       />
     </Box>
   )

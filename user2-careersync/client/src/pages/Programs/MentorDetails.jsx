@@ -139,7 +139,9 @@ export default function MentorDetails() {
     const lastName = mentor.last_name || "";
     const name = `${firstName} ${lastName}`.trim() || "Mentor";
 
-    const avatar = mentor.profile_image ? `https://api-4be.ptascloud.online/uploads/${mentor.profile_image}` : null;
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+    const apiOrigin = apiBase.replace(/\/api\/?$/, '');
+    const avatar = mentor.profile_image ? `${apiOrigin}/uploads/${mentor.profile_image}` : null;
     const role = mentor.job_title || mentor.Position?.position_name || "Mentor";
     const company = mentor.company_name || "CareerSync";
     const bio = mentor.about_mentor || "No bio available.";
@@ -519,7 +521,7 @@ export default function MentorDetails() {
                   <Typography 
                     variant="body2" 
                     component="a"
-                    href={`https://api-4be.ptascloud.online/uploads/${mentorDisplay.portfolioPdf}`}
+                    href={`${apiOrigin}/uploads/${mentorDisplay.portfolioPdf}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     sx={{ 

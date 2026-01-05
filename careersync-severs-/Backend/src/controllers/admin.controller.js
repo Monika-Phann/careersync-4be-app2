@@ -365,7 +365,13 @@ const createRole = async (req, res) => {
   }
 
   try {
-    const existing = await User.findOne({ where: { email } });
+    // ✅ FIX: Use case-insensitive email check for PostgreSQL
+    const existing = await User.findOne({ 
+      where: sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('email')),
+        email.toLowerCase()
+      )
+    });
     if (existing) return res.status(409).json({ message: 'Email already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);

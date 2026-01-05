@@ -229,7 +229,10 @@ const PositionManagement = () => {
     if (positionFormData.image_position instanceof File) {
       src = URL.createObjectURL(positionFormData.image_position);
     } else {
-      src = `${API_URL}/uploads/positions/${positionFormData.image_position}`;
+      // Handle both R2 URLs (full URLs) and legacy local paths
+      src = positionFormData.image_position.startsWith('http') 
+        ? positionFormData.image_position 
+        : `${API_URL}/uploads/positions/${positionFormData.image_position}`;
     }
     return (
       <div className="mt-2">
@@ -297,7 +300,9 @@ const PositionManagement = () => {
                         <td>
                           {p.image_position ? (
                             <img 
-                              src={`${API_URL}/uploads/positions/${p.image_position}`} 
+                              src={p.image_position.startsWith('http') 
+                                ? p.image_position 
+                                : `${API_URL}/uploads/positions/${p.image_position}`} 
                               alt={p.position_name}
                               style={{ width: '45px', height: '45px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #dee2e6' }}
                               onError={(e) => {e.target.style.display='none'}}
@@ -453,7 +458,9 @@ const PositionManagement = () => {
                     <div className="text-center mb-4">
                     {selectedPosition.image_position ? (
                         <img 
-                        src={`${API_URL}/uploads/positions/${selectedPosition.image_position}`} 
+                        src={selectedPosition.image_position.startsWith('http') 
+                          ? selectedPosition.image_position 
+                          : `${API_URL}/uploads/positions/${selectedPosition.image_position}`} 
                         alt={selectedPosition.position_name}
                         className="img-fluid rounded shadow-sm"
                         style={{ maxHeight: '200px', objectFit: 'contain' }}

@@ -10,8 +10,8 @@ const {
   ScheduleTimeslot,
 } = require("../models");
 
-const APP_URL =
-  process.env.APP_URL || `http://localhost:${process.env.PORT || 5001}`;
+const APP_URL = process.env.APP_URL;
+if (!APP_URL) throw new Error('APP_URL environment variable is required');
 
 exports.getProfile = async (userId) => {
   const user = await User.findByPk(userId, {

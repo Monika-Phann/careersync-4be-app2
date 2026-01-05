@@ -44,10 +44,27 @@ export const ProgramCardContent = styled(Box)({
 
 export const ProgramImage = styled('img')({
   width: '100%',
-  height: 200,
+  height: 'auto',
+  minHeight: 280,
+  maxHeight: 350,
   objectFit: 'cover',
   objectPosition: 'center',
   borderRadius: 8,
   display: 'block',
+  aspectRatio: '16/9',
+  cursor: 'pointer',
+  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+  '&:hover': {
+    transform: 'scale(1.02)',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+  },
+  '@media (max-width: 900px)': {
+    minHeight: 240,
+    maxHeight: 300,
+  },
+  '@media (max-width: 600px)': {
+    minHeight: 200,
+    maxHeight: 250,
+  },
 })
 

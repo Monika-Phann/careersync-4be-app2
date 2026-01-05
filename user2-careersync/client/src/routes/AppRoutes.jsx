@@ -45,7 +45,7 @@ function AppRoutes() {
 
       {/* --- Program & Mentor Discovery --- */}
       {/* Programs acts as your category high-level landing page */}
-      <Route path="/programs" element={<Programs defaultCategory="Information Technology" />} />
+      <Route path="/programs" element={<Programs defaultCategory="All Industries" />} />
       
       {/* Mentors handles the searchable list and specific profiles */}
       <Route path="/mentors" element={<MentorBrowse />} />

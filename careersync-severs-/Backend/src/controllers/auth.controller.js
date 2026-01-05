@@ -35,14 +35,15 @@ exports.verifyEmail = async (req, res) => {
     
     await authService.verifyEmailToken(token);
     
-    // ✅ FIX: Redirect directly to the Frontend Sign In page
-    // This uses the full URL to ensure it jumps to the Student App
-    return res.redirect('https://careersync-4be.ptascloud.online/signin?verified=true');
+    // Redirect to the student frontend using env
+    const frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || 'http://localhost:5174';
+    return res.redirect(`${frontendUrl}/signin?verified=true`);
 
   } catch (err) {
     console.error("Verification error:", err.message);
-    // ❌ ERROR: Redirect to Frontend with error flag
-    return res.redirect('https://careersync-4be.ptascloud.online/signin?error=verification_failed');
+    // Redirect to frontend with error flag
+    const frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || 'http://localhost:5174';
+    return res.redirect(`${frontendUrl}/signin?error=verification_failed`);
   }
 };
 

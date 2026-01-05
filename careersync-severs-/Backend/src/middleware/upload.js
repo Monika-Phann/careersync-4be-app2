@@ -90,18 +90,30 @@ const uploadPDF = multer({
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB
 });
 
+// 4. Position Image Upload (Saves to 'positions/' folder in R2)
+const uploadPositionImage = multer({ 
+  storage: createS3Storage('positions'), 
+  fileFilter: imageFilter, 
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+});
+
 // --- Exports (Maintaining backward compatibility) ---
 
 module.exports = {
   uploadProfile,
   uploadDocuments,
   uploadPDF,
+  uploadPositionImage,
 
   // Wrapper for single file uploads that chooses the right uploader
   single: (fieldName) => {
     // If it's a profile image, use the profile uploader
     if (fieldName === 'profile_image' || fieldName === 'profileImage') {
       return uploadProfile.single(fieldName);
+    }
+    // If it's a position image, use the position image uploader
+    if (fieldName === 'image_position' || fieldName === 'position_image') {
+      return uploadPositionImage.single(fieldName);
     }
     // If it's strictly a PDF field (like agenda), use PDF uploader
     if (fieldName === 'agenda_pdf' || fieldName === 'file') {
@@ -126,6 +138,8 @@ module.exports = {
         // Sort files into correct R2 folders based on fieldname
         if (file.fieldname === 'profile_image') {
           cb(null, `profiles/profile-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+        } else if (file.fieldname === 'image_position' || file.fieldname === 'position_image') {
+          cb(null, `positions/position-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
         } else {
           cb(null, `documents/doc-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
         }

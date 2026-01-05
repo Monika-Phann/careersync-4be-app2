@@ -115,8 +115,10 @@ export default function MentorBrowse() {
           let profileImage = m?.profile_image;
           if (profileImage) {
             if (!profileImage.startsWith('http')) {
+               const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+               const apiOrigin = apiBase.replace(/\/api\/?$/, '');
                // Legacy fallback
-               profileImage = `https://api-4be.ptascloud.online/uploads/${profileImage}`;
+               profileImage = `${apiOrigin}/uploads/${profileImage}`;
             }
           } else {
              profileImage = m?.User?.avatar || m?.avatar || "https://via.placeholder.com/150";

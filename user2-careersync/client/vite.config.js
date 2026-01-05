@@ -3,8 +3,14 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
+  define: {
+    // Define process.env for libraries that expect it (like axios, etc.)
+    'process.env.NODE_ENV': JSON.stringify(mode === 'production' ? 'production' : 'development'),
+    'process.env': JSON.stringify({ NODE_ENV: mode === 'production' ? 'production' : 'development' }),
+    'global': 'globalThis',
+  },
   resolve: {
     alias: {
       // Fixes the "Two Reacts" crash
@@ -16,11 +22,11 @@ export default defineConfig({
   },
   server: {
     host: true, 
-    port: 3000,
+    port: 5174,
     allowedHosts: ["careersync-4be.ptascloud.online"],
     // Fixes the "Loading failed" error on Cloudflare/HTTPS
     hmr: {
       clientPort: 443 
     }
   }
-})
+}))

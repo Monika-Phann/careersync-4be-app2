@@ -1,11 +1,13 @@
 import axiosInstance from '../api/axiosInstance'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+
 /**
  * Get error message from API error response
  */
 function getErrorMessage(error, fallbackMessage) {
   if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
-    return 'Cannot connect to server. Please make sure the backend server is running.'
+    return `Cannot connect to server. Please make sure the backend server is running on ${API_BASE}`
   }
 
   const errorData = error?.response?.data

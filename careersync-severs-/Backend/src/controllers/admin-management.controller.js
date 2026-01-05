@@ -70,36 +70,10 @@ const uploadProfile = multer({
 });
 
 /**
- * Multer storage for position images
+ * Use R2 upload middleware for position images
  */
-const positionStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(process.cwd(), "uploads/positions");
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-
-const uploadPosition = multer({
-  storage: positionStorage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase()
-    );
-    const mimetype = allowedTypes.test(file.mimetype);
-
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error("Only image files are allowed!"));
-    }
-  },
-});
+const upload = require("../middleware/upload");
+const uploadPosition = upload.uploadPositionImage;
 
 // ============================================
 // ADMIN SETUP & MANAGEMENT
@@ -1357,9 +1331,20 @@ const createPosition = async (req, res) => {
       return res.status(404).json({ message: "Industry not found" });
     }
 
-    const image_position = req.file
-      ? `/uploads/positions/${req.file.filename}`
-      : null;
+    // Extract position image URL from R2 upload
+    let image_position = null;
+    if (req.file) {
+      // R2 uploads have 'key' property, use R2_PUBLIC_URL to construct full URL
+      if (process.env.R2_PUBLIC_URL && req.file.key) {
+        image_position = `${process.env.R2_PUBLIC_URL}/${req.file.key}`;
+      } else if (req.file.location) {
+        // Fallback to location if R2_PUBLIC_URL not set
+        image_position = req.file.location;
+      } else if (req.file.filename) {
+        // Legacy fallback for local uploads
+        image_position = `${process.env.APP_URL || 'http://localhost:5001'}/uploads/positions/${req.file.filename}`;
+      }
+    }
 
     const position = await Position.create({
       id: uuidv4(),
@@ -1449,8 +1434,18 @@ const updatePosition = async (req, res) => {
     if (position_name) position.position_name = position_name.trim();
     if (description !== undefined) position.description = description;
 
+    // Extract position image URL from R2 upload if file is provided
     if (req.file) {
-      position.image_position = `/uploads/positions/${req.file.filename}`;
+      // R2 uploads have 'key' property, use R2_PUBLIC_URL to construct full URL
+      if (process.env.R2_PUBLIC_URL && req.file.key) {
+        position.image_position = `${process.env.R2_PUBLIC_URL}/${req.file.key}`;
+      } else if (req.file.location) {
+        // Fallback to location if R2_PUBLIC_URL not set
+        position.image_position = req.file.location;
+      } else if (req.file.filename) {
+        // Legacy fallback for local uploads
+        position.image_position = `${process.env.APP_URL || 'http://localhost:5001'}/uploads/positions/${req.file.filename}`;
+      }
     }
 
     await position.save();
@@ -1692,8 +1687,13 @@ const createUser = async (req, res) => {
   }
 
   try {
-    // Check if email exists
-    const existing = await User.findOne({ where: { email } });
+    // ✅ FIX: Use case-insensitive email check for PostgreSQL
+    const existing = await User.findOne({ 
+      where: sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('email')),
+        email.toLowerCase()
+      )
+    });
     if (existing) {
       return res.status(409).json({ message: "Email already exists" });
     }

@@ -118,9 +118,11 @@ export const ModernBulb = styled(Box)({
 
 // --- 4. SECTION & CARD COMPONENTS ---
 
-export const Section = styled(Box)(({ theme, light, darkGrey }) => ({
+export const Section = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'light' && prop !== 'darkGrey' && prop !== 'dark',
+})(({ theme, light, darkGrey, dark }) => ({
   padding: theme.spacing(12, 0),
-  backgroundColor: light ? "#f8fafc" : darkGrey ? "#111827" : "#0b1220",
+  backgroundColor: light ? "#f8fafc" : darkGrey ? "#111827" : dark ? "#0b1220" : "#0b1220",
   color: light ? "#0f172a" : "white",
   position: "relative",
   zIndex: 2,

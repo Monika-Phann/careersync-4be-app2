@@ -3,6 +3,9 @@ const router = express.Router();
 const { Position, Industry } = require('../models');
 const authMiddleware = require('../middleware/auth');
 
+const APP_URL = process.env.APP_URL;
+if (!APP_URL) throw new Error('APP_URL environment variable is required');
+
 /**
  * PUBLIC ROUTES
  * These endpoints are public for users to browse positions
@@ -31,14 +34,18 @@ router.get('/', async (req, res) => {
       order: [['position_name', 'ASC']]
     });
     
-    // Format response with image URLs
+    // Format response with image URLs (handle both R2 URLs and legacy paths)
     const formatted = positions.map(p => ({
       id: p.id,
       position_name: p.position_name,
       description: p.description,
       industry_id: p.industry_id,
       industry_name: p.Industry?.industry_name,
-      image_url: p.image_position ? `http://localhost:5001${p.image_position}` : null,
+      image_url: p.image_position 
+        ? (p.image_position.startsWith('http') 
+            ? p.image_position 
+            : `${APP_URL}${p.image_position}`)
+        : null,
       created_at: p.created_at
     }));
     
@@ -68,14 +75,18 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Position not found' });
     }
     
-    // Format response
+    // Format response (handle both R2 URLs and legacy paths)
     const formatted = {
       id: position.id,
       position_name: position.position_name,
       description: position.description,
       industry_id: position.industry_id,
       industry_name: position.Industry?.industry_name,
-      image_url: position.image_position ? `http://localhost:5001${position.image_position}` : null,
+      image_url: position.image_position 
+        ? (position.image_position.startsWith('http') 
+            ? position.image_position 
+            : `${APP_URL}${position.image_position}`)
+        : null,
       created_at: position.created_at
     };
     
@@ -97,12 +108,16 @@ router.get('/industry/:industry_id', async (req, res) => {
       order: [['position_name', 'ASC']]
     });
     
-    // Format with image URLs
+    // Format with image URLs (handle both R2 URLs and legacy paths)
     const formatted = positions.map(p => ({
       id: p.id,
       position_name: p.position_name,
       description: p.description,
-      image_url: p.image_position ? `http://localhost:5001${p.image_position}` : null
+      image_url: p.image_position 
+        ? (p.image_position.startsWith('http') 
+            ? p.image_position 
+            : `${APP_URL}${p.image_position}`)
+        : null
     }));
     
     res.json(formatted);

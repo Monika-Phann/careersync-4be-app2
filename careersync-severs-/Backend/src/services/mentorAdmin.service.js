@@ -1,7 +1,8 @@
 const { Mentor, User, Admin, sequelize } = require("../models");
 const { sendMentorApprovalEmail, sendMentorRejectionEmail } = require("./email.service");
 
-const APP_URL = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+const APP_URL = process.env.APP_URL;
+if (!APP_URL) throw new Error('APP_URL environment variable is required');
 
 exports.getPendingApplications = async () => {
   return await Mentor.findAll({

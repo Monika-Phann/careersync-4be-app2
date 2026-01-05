@@ -3,8 +3,20 @@ const sessionService = require("../services/session.service");
 
 exports.createSession = async (req, res) => {
   try {
-    // Handle uploaded PDF file
-    const agendaPdf = req.file ? req.file.filename : null;
+    // Handle uploaded PDF file - extract R2 URL if available
+    let agendaPdf = null;
+    if (req.file) {
+      // R2 uploads have 'key' property, use R2_PUBLIC_URL to construct full URL
+      if (process.env.R2_PUBLIC_URL && req.file.key) {
+        agendaPdf = `${process.env.R2_PUBLIC_URL}/${req.file.key}`;
+      } else if (req.file.location) {
+        // Fallback to location if R2_PUBLIC_URL not set
+        agendaPdf = req.file.location;
+      } else if (req.file.filename) {
+        // Legacy fallback for local uploads
+        agendaPdf = `${process.env.APP_URL || 'http://localhost:5001'}/uploads/${req.file.filename}`;
+      }
+    }
     
     // Prepare session data with uploaded file
     const sessionData = {
@@ -36,9 +48,18 @@ exports.editSession = async (req, res) => {
     const { sessionId } = req.params;
     const updates = { ...req.body };
     
-    // Handle uploaded PDF file if provided
+    // Handle uploaded PDF file if provided - extract R2 URL if available
     if (req.file) {
-      updates.agenda_pdf = req.file.filename;
+      // R2 uploads have 'key' property, use R2_PUBLIC_URL to construct full URL
+      if (process.env.R2_PUBLIC_URL && req.file.key) {
+        updates.agenda_pdf = `${process.env.R2_PUBLIC_URL}/${req.file.key}`;
+      } else if (req.file.location) {
+        // Fallback to location if R2_PUBLIC_URL not set
+        updates.agenda_pdf = req.file.location;
+      } else if (req.file.filename) {
+        // Legacy fallback for local uploads
+        updates.agenda_pdf = `${process.env.APP_URL || 'http://localhost:5001'}/uploads/${req.file.filename}`;
+      }
     }
     
     const result = await sessionService.editSession(sessionId, req.user.id, updates);

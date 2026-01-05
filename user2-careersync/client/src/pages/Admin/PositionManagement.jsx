@@ -30,7 +30,8 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import axios from 'axios'
 
-const API_URL = 'https://api-4be.ptascloud.online/api'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+const API_URL = `${API_BASE}/api`
 
 function PositionManagement() {
   const [positions, setPositions] = useState([])
@@ -85,7 +86,13 @@ function PositionManagement() {
       description: position?.description || '',
     })
     setImageFile(null)
-    setImagePreview(position?.image_position ? `${API_URL}${position.image_position}` : null)
+    // Handle both R2 URLs (full URLs) and legacy local paths
+    const imageUrl = position?.image_position 
+      ? (position.image_position.startsWith('http') 
+          ? position.image_position 
+          : `${API_URL}${position.image_position}`)
+      : null;
+    setImagePreview(imageUrl)
     setDialogOpen(true)
   }
 
@@ -223,7 +230,11 @@ function PositionManagement() {
                 <TableRow key={position.id}>
                   <TableCell>
                     <Avatar
-                      src={position.image_position ? `${API_URL}${position.image_position}` : undefined}
+                      src={position.image_position 
+                        ? (position.image_position.startsWith('http') 
+                            ? position.image_position 
+                            : `${API_URL}${position.image_position}`)
+                        : undefined}
                       alt={position.position_name}
                       sx={{ width: 40, height: 40 }}
                     />

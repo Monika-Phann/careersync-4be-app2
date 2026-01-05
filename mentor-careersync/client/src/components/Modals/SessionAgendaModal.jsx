@@ -6,85 +6,32 @@ import {
   IconButton,
   Typography,
   Box,
-  Chip,
+  Button,
+  Alert,
 } from '@mui/material'
-import { Close as CloseIcon, AccessTime as AccessTimeIcon, OpenInNew as OpenInNewIcon } from '@mui/icons-material'
+import { Close as CloseIcon, Description as DescriptionIcon, OpenInNew as OpenInNewIcon } from '@mui/icons-material'
 import { SessionAgendaModalStyles } from './SessionAgendaModal.styles'
+import axiosInstance from '../../api/axiosInstance'
 
-const agendaItems = [
-  {
-    title: 'Welcome + What Does a Data Analyst Do?',
-    time: '9:00 - 9:30 AM',
-    details: [
-      'Introductions',
-      'Overview of job responsibilities',
-      'Student Q&A',
-    ],
-    color: '#9c27b0',
-  },
-  {
-    title: 'Explore the Dataset',
-    time: '9:30 - 10:30 AM',
-    details: [
-      'Open public/fake dataset',
-      'Identify rows, columns, data types',
-      'Mini task: Find 3 interesting data points',
-    ],
-    color: '#2196f3',
-  },
-  {
-    title: 'Data Cleaning Basics',
-    time: '10:30 - 11:30 AM',
-    details: [
-      'Removing duplicates',
-      'Fixing missing values',
-      'Normalizing categories',
-      'Quick challenge activity',
-    ],
-    color: '#4caf50',
-  },
-  {
-    title: 'Lunch Break + Career Chat',
-    time: '11:30 - 12:30 PM',
-    details: [
-      'Discuss education paths',
-      'Salaries',
-      'Tools',
-      'Daily work',
-    ],
-    color: '#ff9800',
-  },
-  {
-    title: 'Data Visualization',
-    time: '12:30 - 1:45 PM',
-    details: [
-      'Create charts (bar, pie, line)',
-      'Mini challenge: Visualize a trend',
-    ],
-    color: '#e91e63',
-  },
-  {
-    title: 'Build a Mini Dashboard',
-    time: '1:45 - 2:45 PM',
-    details: [
-      'Combine charts',
-      'Add simple KPIs',
-      'Create a one-page dashboard',
-    ],
-    color: '#00bcd4',
-  },
-  {
-    title: 'Final Presentation + Wrap-Up',
-    time: '2:45 - 3:00 PM',
-    details: [
-      'Students share dashboards',
-      'Feedback and reflections',
-    ],
-    color: '#009688',
-  },
-]
+function SessionAgendaModal({ open, onClose, agendaPdfUrl = null }) {
+  const getBaseUrl = () => {
+    const baseURL = axiosInstance.defaults.baseURL || 'http://localhost:5001/api';
+    return baseURL.replace('/api', '');
+  };
 
-function SessionAgendaModal({ open, onClose }) {
+  // Construct full URL if needed
+  const fullPdfUrl = agendaPdfUrl 
+    ? (agendaPdfUrl.startsWith('http') 
+        ? agendaPdfUrl 
+        : `${getBaseUrl()}/uploads/${agendaPdfUrl}`)
+    : null;
+
+  const handleViewPdf = () => {
+    if (fullPdfUrl) {
+      window.open(fullPdfUrl, '_blank');
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -92,20 +39,19 @@ function SessionAgendaModal({ open, onClose }) {
       maxWidth="lg"
       fullWidth
       PaperProps={{
-        sx: SessionAgendaModalStyles.dialogPaper,
+        sx: {
+          ...SessionAgendaModalStyles.dialogPaper,
+          height: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+        },
       }}
     >
       <DialogTitle sx={SessionAgendaModalStyles.dialogTitle}>
         <Box sx={SessionAgendaModalStyles.titleContainer}>
           <Typography variant="h4" sx={SessionAgendaModalStyles.title}>
-            DATA ANALYST SHADOWING AGENDA
+            Session Agenda
           </Typography>
-          <Box sx={SessionAgendaModalStyles.durationContainer}>
-            <AccessTimeIcon sx={SessionAgendaModalStyles.durationIcon} />
-            <Typography variant="body1" sx={SessionAgendaModalStyles.duration}>
-              6 Hours Total
-            </Typography>
-          </Box>
         </Box>
         <IconButton
           onClick={onClose}
@@ -116,46 +62,57 @@ function SessionAgendaModal({ open, onClose }) {
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={SessionAgendaModalStyles.dialogContent}>
-        <Box sx={SessionAgendaModalStyles.agendaContainer}>
-          {agendaItems.map((item, index) => (
-            <Box
-              key={index}
-              sx={{
-                ...SessionAgendaModalStyles.agendaItem,
-                borderLeft: `4px solid ${item.color}`,
-                backgroundColor: `${item.color}08`,
-              }}
-            >
-              <Box sx={SessionAgendaModalStyles.agendaHeader}>
-                <Typography variant="h6" sx={SessionAgendaModalStyles.agendaTitle}>
-                  {item.title}
-                </Typography>
-                <Box sx={SessionAgendaModalStyles.agendaMeta}>
-                  <Chip
-                    label={item.time}
-                    size="small"
-                    sx={SessionAgendaModalStyles.timeChip}
-                  />
-                  <IconButton size="small" sx={SessionAgendaModalStyles.linkButton}>
-                    <OpenInNewIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Box>
-              <Box component="ul" sx={SessionAgendaModalStyles.agendaDetails}>
-                {item.details.map((detail, detailIndex) => (
-                  <li key={detailIndex}>
-                    <Typography variant="body2">{detail}</Typography>
-                  </li>
-                ))}
-              </Box>
+      <DialogContent 
+        sx={{
+          ...SessionAgendaModalStyles.dialogContent,
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
+          overflow: 'hidden',
+        }}
+      >
+        {fullPdfUrl ? (
+          <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h6">
+                Session Agenda PDF
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<OpenInNewIcon />}
+                onClick={handleViewPdf}
+              >
+                Open in New Tab
+              </Button>
             </Box>
-          ))}
-        </Box>
-
-        <Typography variant="body2" sx={SessionAgendaModalStyles.footerText}>
-          This hands-on shadowing experience will give you a real taste of what data analysts do daily.
-        </Typography>
+            <Box
+              component="iframe"
+              src={`${fullPdfUrl}#toolbar=1`}
+              sx={{
+                width: '100%',
+                height: '100%',
+                border: '1px solid #e0e0e0',
+                borderRadius: 1,
+                flex: 1,
+                minHeight: 0,
+                backgroundColor: '#f5f5f5',
+              }}
+              title="Session Agenda PDF"
+            />
+          </Box>
+        ) : (
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, py: 4 }}>
+            <DescriptionIcon sx={{ fontSize: 80, color: 'text.disabled' }} />
+            <Typography variant="h6" sx={{ textAlign: 'center' }}>
+              No Session Agenda Available
+            </Typography>
+            <Alert severity="info" sx={{ width: '100%', maxWidth: 500 }}>
+              No agenda PDF has been uploaded for this session yet. Please upload an agenda PDF when creating or editing a session.
+            </Alert>
+          </Box>
+        )}
       </DialogContent>
     </Dialog>
   )

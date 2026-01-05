@@ -24,7 +24,8 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import axios from 'axios'
 
-const API_URL = 'https://api-4be.ptascloud.online/api'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+const API_URL = `${API_BASE}/api`
 
 function IndustryManagement() {
   const [industries, setIndustries] = useState([])

@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const axiosInstance = axios.create({
-  baseURL: 'https://api-4be.ptascloud.online',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001',
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 })

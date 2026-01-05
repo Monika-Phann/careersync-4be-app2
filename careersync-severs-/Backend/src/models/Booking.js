@@ -48,7 +48,6 @@ module.exports = (sequelize) => {
 
     Booking.hasOne(models.Payment, { foreignKey: 'booking_id', onDelete: 'CASCADE' });
     Booking.hasOne(models.Certificate, { foreignKey: 'booking_id', onDelete: 'SET NULL' });
-    Booking.hasOne(models.ScheduleTimeslot, { foreignKey: 'booking_id' });
   };
 
   return Booking;

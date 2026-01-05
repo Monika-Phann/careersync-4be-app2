@@ -1,9 +1,17 @@
 import axios from "axios";
 import { getAuthToken, clearAuth } from "../utils/auth";
 
-// 1. Create axios instance with HARDCODED Production URL
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
+// 1. Create axios instance using env-driven base URL
+// Ensure baseURL includes /api prefix for backend routes
+const baseURL = API_BASE.endsWith("/api") 
+  ? API_BASE 
+  : API_BASE.endsWith("/") 
+    ? `${API_BASE}api` 
+    : `${API_BASE}/api`;
+
 const axiosInstance = axios.create({
-  baseURL: "https://api-4be.ptascloud.online/api",
+  baseURL: baseURL,
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -36,8 +44,9 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       clearAuth();
-      // Redirect to User Login if session expires
-      window.location.href = "https://ptascloud.online/login";
+      // Redirect to student platform homepage if session expires
+      const studentPlatformUrl = import.meta.env.VITE_STUDENT_PLATFORM_URL || 'http://localhost:5174';
+      window.location.href = studentPlatformUrl;
     }
     return Promise.reject(error);
   }

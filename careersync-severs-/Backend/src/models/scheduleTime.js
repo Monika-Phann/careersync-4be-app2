@@ -50,8 +50,9 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: "CASCADE"
     });
 
-    ScheduleTimeslot.belongsTo(models.Booking, {
-      foreignKey: "booking_id"
+    // A timeslot can be associated with a booking via Booking.schedule_timeslot_id
+    ScheduleTimeslot.hasOne(models.Booking, {
+      foreignKey: "schedule_timeslot_id"
     });
   };
 

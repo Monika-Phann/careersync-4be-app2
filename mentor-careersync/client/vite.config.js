@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
   resolve: {
     alias: {
@@ -16,13 +16,15 @@ export default defineConfig({
   },
   server: {
     host: true,
-    port: 5174, // Mentor app usually runs on a different port (often 5174 or 3001)
+    port: 5175, // Mentor app runs on port 5175
     allowedHosts: [
       "mentor-4be.ptascloud.online",
       "localhost"
     ],
     hmr: {
-      clientPort: 443 // Fixes the "Loading failed" error on Cloudflare
+      // For local development, don't specify clientPort (Vite will use server port)
+      // For production/Cloudflare behind proxy, use port 443
+      ...(mode === 'production' ? { clientPort: 443 } : {})
     }
   }
-})
+}))

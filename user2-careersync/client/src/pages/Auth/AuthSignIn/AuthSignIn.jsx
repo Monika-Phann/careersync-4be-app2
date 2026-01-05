@@ -55,15 +55,32 @@ function AuthSignIn() {
 
     try {
       // Normalize email
+      console.log('Attempting login for:', formData.email.toLowerCase().trim());
       const result = await loginUser({ email: formData.email.toLowerCase().trim(), password: formData.password })
       
+      console.log('Login result:', {
+        success: result.success,
+        hasData: !!result.data,
+        message: result.message,
+        dataKeys: result.data ? Object.keys(result.data) : []
+      });
+      
       if (!result.success) {
+        console.error('Login failed:', result.message);
         setError(result.message || 'Login failed. Please try again.')
         return
       }
 
       const { user, accessToken, token } = result.data || {}
       const finalToken = accessToken || token
+      
+      console.log('Token extraction:', {
+        hasUser: !!user,
+        hasAccessToken: !!accessToken,
+        hasToken: !!token,
+        finalToken: finalToken ? 'present' : 'missing',
+        userRole: user?.role || user?.role_name
+      });
 
       if (user && (user.emailVerified === false || user.email_verified === false)) {
         setError('Please verify your email before signing in.')
@@ -101,22 +118,52 @@ function AuthSignIn() {
       
       // Role-based redirection
       const userRole = user.role || user.role_name || userData.role;
+      console.log('User role detected:', userRole);
       
       if (userRole === 'mentor') {
-        const mentorPlatformUrl = "https://mentor-4be.ptascloud.online";
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('accessToken');
-        const redirectUrl = `${mentorPlatformUrl}/auth/sso?token=${encodeURIComponent(finalToken)}`;
-        window.location.href = redirectUrl;
-        return; 
+        const mentorPlatformUrl =
+          import.meta.env.VITE_MENTOR_PLATFORM_URL ||
+          "http://localhost:5175";
+        
+        console.log('Mentor platform URL:', mentorPlatformUrl);
+        console.log('Token available:', !!finalToken);
+        
+        if (!finalToken) {
+          setError('Authentication token is missing. Please try logging in again.');
+          return;
+        }
+        
+        try {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('accessToken');
+          const redirectUrl = `${mentorPlatformUrl}/auth/sso?token=${encodeURIComponent(finalToken)}`;
+          console.log('Redirecting to:', redirectUrl);
+          window.location.href = redirectUrl;
+          return;
+        } catch (redirectError) {
+          console.error('Redirect error:', redirectError);
+          setError(`Failed to redirect to mentor platform: ${redirectError.message}`);
+          return;
+        }
       }
       
       login(userData, finalToken);
       navigate('/mentors');
     } catch (err) {
-      console.error(err);
-      setError('An unexpected error occurred. Please try again.')
+      console.error('Login error details:', {
+        error: err,
+        message: err?.message,
+        stack: err?.stack,
+        response: err?.response?.data,
+        status: err?.response?.status
+      });
+      
+      // Show actual error message if available
+      const errorMessage = err?.response?.data?.message 
+        || err?.message 
+        || 'An unexpected error occurred. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false)
     }

@@ -1,8 +1,11 @@
 import axiosInstance from '../api/axiosInstance'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+const API_ORIGIN = API_BASE.replace(/\/api\/?$/, '');
+
 function getErrorMessage(error, fallbackMessage) {
   if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
-    return 'Cannot connect to server. Please make sure the backend server is running on https://api-4be.ptascloud.online'
+    return `Cannot connect to server. Please make sure the backend server is running on ${API_BASE}`
   }
   
   const errorData = error?.response?.data
@@ -36,11 +39,9 @@ export async function getProfile() {
     const rawImage = accUser.profile_image_url || accUser.profile_image;
 
     if (rawImage) {
-      if (rawImage.startsWith('http')) {
-        profileImageUrl = rawImage;
-      } else {
-        profileImageUrl = `https://api-4be.ptascloud.online/uploads/${rawImage}`;
-      }
+      profileImageUrl = rawImage.startsWith('http')
+        ? rawImage
+        : `${API_ORIGIN}/uploads/${rawImage}`;
     }
     
     const capitalizeFirst = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : ''

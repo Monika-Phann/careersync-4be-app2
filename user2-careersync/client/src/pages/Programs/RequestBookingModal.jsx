@@ -72,7 +72,8 @@ export default function RequestBookingModal({ open, onClose, mentor }) {
       let errorMessage = "Failed to create booking. Please try again.";
       
       if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
-        errorMessage = "Cannot connect to server. Please make sure the backend is running on https://api-4be.ptascloud.online";
+        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+        errorMessage = `Cannot connect to server. Please make sure the backend is running on ${apiBase}`;
       } else if (err.response?.status === 401) {
         errorMessage = "Please log in to book a session.";
       } else if (err.response?.status === 400) {
