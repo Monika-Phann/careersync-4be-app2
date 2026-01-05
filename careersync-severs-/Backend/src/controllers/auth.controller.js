@@ -94,36 +94,52 @@ exports.resetRequest = async (req, res) => {
 };
 
 // GET route to handle reset password link clicks from email
+// NOTE: This route should only be accessed via /api/auth/reset/:token
+// If email links point directly to frontend, this won't be called
 exports.showResetPasswordForm = async (req, res) => {
   try {
     const { token } = req.params;
     
     if (!token) {
       const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || 'http://localhost:5174';
-      return res.redirect(`${frontendUrl}/reset?error=invalid`);
+      return res.redirect(302, `${frontendUrl}/reset?error=invalid`);
     }
     
     // Validate token exists and is not expired
     const { User } = require('../models');
     const user = await User.findOne({ where: { reset_token: token } });
     
-    // Use environment variable with fallbacks for frontend URL
-    const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || 'http://localhost:5174';
+    // Get frontend URL - ensure it's NOT the backend API URL
+    let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || 'http://localhost:5174';
+    
+    // Safety check: prevent redirect loop - ensure frontendUrl is NOT pointing to backend
+    const apiPort = process.env.PORT || '5001';
+    const apiHost = process.env.APP_URL || process.env.API_URL || `http://localhost:${apiPort}`;
+    
+    // Remove any trailing slashes and normalize
+    frontendUrl = frontendUrl.replace(/\/$/, '').replace(/\/api\/?$/, '');
+    const normalizedApiUrl = apiHost.replace(/\/$/, '').replace(/\/api\/?$/, '');
+    
+    // If frontendUrl matches backend URL or contains API paths, use safe default
+    if (frontendUrl === normalizedApiUrl || frontendUrl.includes('/api') || frontendUrl.includes(`:${apiPort}`)) {
+      console.warn('⚠️ Frontend URL appears to point to backend! Using safe default to prevent redirect loop.');
+      frontendUrl = 'http://localhost:5174'; // Safe default for development
+    }
 
     if (!user) {
-      return res.redirect(`${frontendUrl}/reset/${token}?error=invalid`);
+      return res.redirect(302, `${frontendUrl}/reset/${token}?error=invalid`);
     }
     
     if (user.reset_token_exp && new Date(user.reset_token_exp) < new Date()) {
-      return res.redirect(`${frontendUrl}/reset/${token}?error=expired`);
+      return res.redirect(302, `${frontendUrl}/reset/${token}?error=expired`);
     }
     
-    // Valid token - redirect to frontend reset password page
-    res.redirect(`${frontendUrl}/reset/${token}`);
+    // Valid token - redirect to frontend reset password page (302 temporary redirect)
+    res.redirect(302, `${frontendUrl}/reset/${token}`);
   } catch (err) {
     console.error('Error showing reset password form:', err);
     const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || 'http://localhost:5174';
-    res.redirect(`${frontendUrl}/reset?error=invalid`);
+    res.redirect(302, `${frontendUrl}/reset?error=invalid`);
   }
 };
 

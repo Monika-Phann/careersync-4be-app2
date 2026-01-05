@@ -98,12 +98,6 @@ app.get("/api", (req, res) => {
   });
 });
 
-// Catch-all for direct /reset/:token access (redirects to frontend)
-app.get("/reset/:token", (req, res) => {
-  const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || 'http://localhost:5174';
-  res.redirect(`${frontendUrl}/reset/${req.params.token}`);
-});
-
 // ⚠️ DEPRECATED: Legacy user routes (Kept for compatibility)
 app.post("/users", async (req, res) => {
   try {
