@@ -227,12 +227,16 @@ async function resetPasswordRequest(email) {
   // IMPORTANT: This MUST be a frontend URL, NOT the backend API URL
   let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
   
+  // Smart production detection: check NODE_ENV or if APP_URL contains production domain
+  const isProduction = process.env.NODE_ENV === 'production' || 
+                       (process.env.APP_URL && !process.env.APP_URL.includes('localhost') && !process.env.APP_URL.includes('127.0.0.1'));
+  
   // Only use localhost fallback in development
   if (!frontendUrl) {
-    if (process.env.NODE_ENV === 'production') {
-      // In production, require environment variable - use production domain as fallback
+    if (isProduction) {
+      // In production, use production domain as fallback
       frontendUrl = 'https://careersync-4be.ptascloud.online';
-      console.warn('⚠️ CLIENT_BASE_URL_STUDENT not set in production! Using production domain fallback.');
+      console.warn('⚠️ CLIENT_BASE_URL_STUDENT not set! Using production domain fallback.');
     } else {
       // Development fallback
       frontendUrl = 'http://localhost:5174';
@@ -248,7 +252,9 @@ async function resetPasswordRequest(email) {
   // If frontendUrl matches backend URL, use production domain to prevent redirect loop
   if (frontendUrl === normalizedApiUrl || frontendUrl.includes(`:${apiPort}`)) {
     console.warn('⚠️ Frontend URL in email appears to point to backend! Using production domain.');
-    frontendUrl = process.env.NODE_ENV === 'production' 
+    const isProduction = process.env.NODE_ENV === 'production' || 
+                         (process.env.APP_URL && !process.env.APP_URL.includes('localhost') && !process.env.APP_URL.includes('127.0.0.1'));
+    frontendUrl = isProduction 
       ? 'https://careersync-4be.ptascloud.online' 
       : 'http://localhost:5174';
   }

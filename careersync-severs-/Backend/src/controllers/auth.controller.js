@@ -38,7 +38,9 @@ exports.verifyEmail = async (req, res) => {
     // Redirect to the student frontend using env
     let frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
     if (!frontendUrl) {
-      frontendUrl = process.env.NODE_ENV === 'production' 
+      const isProduction = process.env.NODE_ENV === 'production' || 
+                           (process.env.APP_URL && !process.env.APP_URL.includes('localhost') && !process.env.APP_URL.includes('127.0.0.1'));
+      frontendUrl = isProduction 
         ? 'https://careersync-4be.ptascloud.online' 
         : 'http://localhost:5174';
     }
@@ -49,7 +51,9 @@ exports.verifyEmail = async (req, res) => {
     // Redirect to frontend with error flag
     let frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
     if (!frontendUrl) {
-      frontendUrl = process.env.NODE_ENV === 'production' 
+      const isProduction = process.env.NODE_ENV === 'production' || 
+                           (process.env.APP_URL && !process.env.APP_URL.includes('localhost') && !process.env.APP_URL.includes('127.0.0.1'));
+      frontendUrl = isProduction 
         ? 'https://careersync-4be.ptascloud.online' 
         : 'http://localhost:5174';
     }
@@ -113,7 +117,9 @@ exports.showResetPasswordForm = async (req, res) => {
     if (!token) {
       let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC;
       if (!frontendUrl) {
-        frontendUrl = process.env.NODE_ENV === 'production' 
+        const isProduction = process.env.NODE_ENV === 'production' || 
+                             (process.env.APP_URL && !process.env.APP_URL.includes('localhost') && !process.env.APP_URL.includes('127.0.0.1'));
+        frontendUrl = isProduction 
           ? 'https://careersync-4be.ptascloud.online' 
           : 'http://localhost:5174';
       }
@@ -127,11 +133,15 @@ exports.showResetPasswordForm = async (req, res) => {
     // Get frontend URL - ensure it's NOT the backend API URL
     let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
     
+    // Smart production detection: check NODE_ENV or if APP_URL contains production domain
+    const isProduction = process.env.NODE_ENV === 'production' || 
+                         (process.env.APP_URL && !process.env.APP_URL.includes('localhost') && !process.env.APP_URL.includes('127.0.0.1'));
+    
     // Only use localhost fallback in development
     if (!frontendUrl) {
-      if (process.env.NODE_ENV === 'production') {
+      if (isProduction) {
         frontendUrl = 'https://careersync-4be.ptascloud.online';
-        console.warn('⚠️ CLIENT_BASE_URL_STUDENT not set in production! Using production domain fallback.');
+        console.warn('⚠️ CLIENT_BASE_URL_STUDENT not set! Using production domain fallback.');
       } else {
         frontendUrl = 'http://localhost:5174';
       }
@@ -148,7 +158,7 @@ exports.showResetPasswordForm = async (req, res) => {
     // If frontendUrl matches backend URL or contains API paths, use production domain
     if (frontendUrl === normalizedApiUrl || frontendUrl.includes('/api') || frontendUrl.includes(`:${apiPort}`)) {
       console.warn('⚠️ Frontend URL appears to point to backend! Using production domain.');
-      frontendUrl = process.env.NODE_ENV === 'production' 
+      frontendUrl = isProduction 
         ? 'https://careersync-4be.ptascloud.online' 
         : 'http://localhost:5174';
     }
@@ -167,7 +177,9 @@ exports.showResetPasswordForm = async (req, res) => {
     console.error('Error showing reset password form:', err);
     let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC;
     if (!frontendUrl) {
-      frontendUrl = process.env.NODE_ENV === 'production' 
+      const isProduction = process.env.NODE_ENV === 'production' || 
+                           (process.env.APP_URL && !process.env.APP_URL.includes('localhost') && !process.env.APP_URL.includes('127.0.0.1'));
+      frontendUrl = isProduction 
         ? 'https://careersync-4be.ptascloud.online' 
         : 'http://localhost:5174';
     }
