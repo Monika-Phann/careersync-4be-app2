@@ -1151,26 +1151,70 @@ function Settings() {
                       <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <SchoolIcon /> Education
                       </Typography>
-                      {accountData.education.map((edu, index) => (
-                        <Card key={edu.id || index} sx={{ mb: 2, p: 2 }}>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-                            {edu.university_name || edu.institution || 'N/A'}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {edu.degree_name || edu.degree} {((edu.field_of_study || edu.fieldOfStudy) && `in ${edu.field_of_study || edu.fieldOfStudy}`)}
-                          </Typography>
-                          {(edu.year_graduated || edu.yearGraduated) && (
-                            <Typography variant="body2" color="text.secondary">
-                              Graduated: {edu.year_graduated || edu.yearGraduated}
-                            </Typography>
-                          )}
-                          {(edu.grade_gpa || edu.gradeGpa) && (
-                            <Typography variant="body2" color="text.secondary">
-                              GPA: {edu.grade_gpa || edu.gradeGpa}
-                            </Typography>
-                          )}
-                        </Card>
-                      ))}
+                      <Box sx={{ position: 'relative', pl: 3 }}>
+                        {/* Timeline line */}
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            left: '7px',
+                            top: '20px',
+                            bottom: '20px',
+                            width: '2px',
+                            bgcolor: '#030C2B',
+                          }}
+                        />
+                        {/* Sort education: Bachelor's first, then Master's, then higher degrees */}
+                        {(() => {
+                          const sortedEducation = [...accountData.education].sort((a, b) => {
+                            const getDegreeLevel = (degreeName) => {
+                              if (!degreeName) return 999;
+                              const degree = (degreeName || '').toLowerCase();
+                              if (degree.includes('bachelor') || degree.includes('b.s') || degree.includes('b.a') || degree.includes('b.eng') || degree.includes('bsc') || degree.includes('ba')) return 1;
+                              if (degree.includes('master') || degree.includes('m.s') || degree.includes('m.a') || degree.includes('m.eng') || degree.includes('msc') || degree.includes('ma') || degree.includes('mba')) return 2;
+                              if (degree.includes('phd') || degree.includes('doctorate') || degree.includes('d.phil')) return 3;
+                              if (degree.includes('associate') || degree.includes('a.s') || degree.includes('aa')) return 0;
+                              return 999;
+                            };
+                            const degreeA = a.degree_name || a.degree || '';
+                            const degreeB = b.degree_name || b.degree || '';
+                            return getDegreeLevel(degreeA) - getDegreeLevel(degreeB);
+                          });
+                          
+                          return sortedEducation.map((edu, index) => (
+                            <Box key={edu.id || index} sx={{ position: 'relative', pb: index < sortedEducation.length - 1 ? 3 : 0, display: 'flex', alignItems: 'flex-start' }}>
+                              {/* Timeline dot */}
+                              <Box
+                                sx={{
+                                  position: 'absolute',
+                                  left: '-19px',
+                                  top: '0.35em', // Center with first line of text (approximately half of line height)
+                                  width: '14px',
+                                  height: '14px',
+                                  borderRadius: '50%',
+                                  bgcolor: '#030C2B',
+                                  border: '3px solid #fff',
+                                  zIndex: 1,
+                                  transform: 'translateY(-50%)', // Center vertically
+                                }}
+                              />
+                              <Box sx={{ flex: 1 }}>
+                                <Typography variant="body1" fontWeight={600} sx={{ color: '#666666', mb: 0.5, lineHeight: 1.5 }}>
+                                  {edu.degree_name || edu.degree || 'Degree'}
+                                  {(edu.year_graduated || edu.yearGraduated) && (
+                                    <>
+                                      {' • '}
+                                      <Box component="span" sx={{ fontWeight: 400 }}>{edu.year_graduated || edu.yearGraduated}</Box>
+                                    </>
+                                  )}
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: '#666666', pl: 1, lineHeight: 1.5 }}>
+                                  {edu.university_name || edu.institution || 'Institution'}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          ));
+                        })()}
+                      </Box>
                     </Box>
                   )}
 

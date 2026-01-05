@@ -148,7 +148,7 @@ export const SessionProfileStyles = {
   timelineDot: {
     position: 'absolute',
     left: '-32px',
-    top: '4px',
+    top: '0.35em', // Center with first line of text
     width: '16px',
     height: '16px',
     borderRadius: '50%',
@@ -158,6 +158,7 @@ export const SessionProfileStyles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    transform: 'translateY(-50%)', // Center vertically
     '&::after': {
       content: '""',
       width: '6px',

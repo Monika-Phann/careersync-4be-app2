@@ -19,17 +19,18 @@ import {
   FormControl,
   InputLabel,
   FormHelperText,
+  IconButton,
+  TextField,
+  Grid,
 } from "@mui/material";
+import { Add as AddIcon, Close as CloseIcon } from "@mui/icons-material";
 import { useNavigate, useLocation, Link as RouterLink } from "react-router-dom";
 import * as yup from "yup";
 import Button from "../../components/UI/Button/Button";
 import FormInput from "../../components/UI/FormInput/FormInput";
 import PasswordField from "../../components/Registration/PasswordField";
 import { useAuth } from "../../context/AuthContext";
-import {
-  registerMentor,
-  applyAsMentor,
-} from "../../services/mentorService";
+import { registerMentor, applyAsMentor } from "../../services/mentorService";
 import { login as loginUser } from "../../services/authService";
 import axios from "axios";
 import { motion } from "framer-motion";
@@ -47,7 +48,7 @@ import {
   CheckboxRow,
 } from "./MentorRegister.styles";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
 const API_URL = `${API_BASE}/api`;
 
 // Yup validation schema for mentor registration
@@ -64,7 +65,10 @@ const mentorRegisterSchema = yup.object({
     .matches(/[A-Z]/, "Password must contain at least one uppercase letter")
     .matches(/[a-z]/, "Password must contain at least one lowercase letter")
     .matches(/[0-9]/, "Password must contain at least one number")
-    .matches(/[^A-Za-z0-9]/, "Password must contain at least one special character")
+    .matches(
+      /[^A-Za-z0-9]/,
+      "Password must contain at least one special character"
+    )
     .required("Password is required"),
   confirmPassword: yup
     .string()
@@ -85,20 +89,10 @@ const mentorRegisterSchema = yup.object({
     .trim()
     .matches(/^(?:0\d{8,9}|\+855\d{8,9})$/, "Phone must start with 0 or +855")
     .required("Phone number is required"),
-  dateOfBirth: yup
-    .string()
-    .required("Date of birth is required"),
-  gender: yup
-    .string()
-    .required("Gender is required"),
-  industry: yup
-    .string()
-    .trim()
-    .required("Industry is required"),
-  position: yup
-    .string()
-    .trim()
-    .required("Position is required"),
+  dateOfBirth: yup.string().required("Date of birth is required"),
+  gender: yup.string().required("Gender is required"),
+  industry: yup.string().trim().required("Industry is required"),
+  position: yup.string().trim().required("Position is required"),
   jobTitle: yup
     .string()
     .trim()
@@ -150,7 +144,7 @@ function MentorRegister() {
     cvLink: "",
     company: "",
     linkedIn: "",
-    education: "",
+    education: [], // Array of education entries: [{ degree: "", year: "", institution: "" }]
     about: "",
     mentorDocuments: [], // Array of File objects for document uploads
     termsAccepted: false,
@@ -170,22 +164,24 @@ function MentorRegister() {
     const fetchIndustriesAndPositions = async () => {
       try {
         setLoadingData(true);
-        console.log('Fetching industries and positions...');
-        
+        console.log("Fetching industries and positions...");
+
         const [industriesRes, positionsRes] = await Promise.all([
           axios.get(`${API_URL}/industries`),
-          axios.get(`${API_URL}/positions`)
+          axios.get(`${API_URL}/positions`),
         ]);
-        
-        console.log('Industries response:', industriesRes.data);
-        console.log('Positions response:', positionsRes.data);
-        
+
+        console.log("Industries response:", industriesRes.data);
+        console.log("Positions response:", positionsRes.data);
+
         setIndustries(industriesRes.data || []);
         setPositions(positionsRes.data || []);
       } catch (error) {
-        console.error('Error fetching industries/positions:', error);
-        console.error('Error response:', error.response?.data);
-        setSubmitError('Failed to load industries and positions. Please refresh the page.');
+        console.error("Error fetching industries/positions:", error);
+        console.error("Error response:", error.response?.data);
+        setSubmitError(
+          "Failed to load industries and positions. Please refresh the page."
+        );
       } finally {
         setLoadingData(false);
       }
@@ -197,19 +193,23 @@ function MentorRegister() {
   // ✅ NEW: Filter positions when industry changes
   useEffect(() => {
     if (formData.industry) {
-      const filtered = positions.filter(pos => pos.industry_id === formData.industry);
+      const filtered = positions.filter(
+        (pos) => pos.industry_id === formData.industry
+      );
       setFilteredPositions(filtered);
-      
+
       // Clear position if it doesn't match the selected industry
-      if (formData.position && !filtered.find(p => p.id === formData.position)) {
-        setFormData(prev => ({ ...prev, position: '' }));
+      if (
+        formData.position &&
+        !filtered.find((p) => p.id === formData.position)
+      ) {
+        setFormData((prev) => ({ ...prev, position: "" }));
       }
     } else {
       setFilteredPositions([]);
-      setFormData(prev => ({ ...prev, position: '' }));
+      setFormData((prev) => ({ ...prev, position: "" }));
     }
   }, [formData.industry, positions]);
-
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -242,7 +242,7 @@ function MentorRegister() {
 
   const handleInputChange = async (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    
+
     // Validate using Yup if field is touched
     if (touched[field]) {
       try {
@@ -267,7 +267,7 @@ function MentorRegister() {
 
   const handleBlur = async (field) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
-    
+
     // Validate using Yup
     try {
       await mentorRegisterSchema.validateAt(field, formData);
@@ -365,7 +365,9 @@ function MentorRegister() {
       case "industry":
       case "position":
         if (!value || !value.trim()) {
-          newErrors[field] = `${field === "industry" ? "Industry" : "Position"} is required`;
+          newErrors[field] = `${
+            field === "industry" ? "Industry" : "Position"
+          } is required`;
         } else {
           delete newErrors[field];
         }
@@ -455,18 +457,20 @@ function MentorRegister() {
 
       // Check if user is a mentor
       const userRole = userData.role || userData.role_name;
-      if (userRole === 'mentor') {
+      if (userRole === "mentor") {
         // Redirect mentors to the mentor platform
         const mentorPlatformUrl = getMentorPlatformUrl();
-        
+
         // IMPORTANT: Clear student platform auth state before redirecting
         // This ensures mentors are NOT logged in on the student platform when they return
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('accessToken');
-        
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("accessToken");
+
         // Note: We don't call login() for mentors - just clear localStorage and redirect
-        const redirectUrl = `${mentorPlatformUrl}?token=${encodeURIComponent(finalToken)}`;
+        const redirectUrl = `${mentorPlatformUrl}?token=${encodeURIComponent(
+          finalToken
+        )}`;
         window.location.href = redirectUrl;
         return; // Exit early
       }
@@ -540,7 +544,7 @@ function MentorRegister() {
         finalErrors.profilePicture = "Profile picture is required";
       }
       setErrors(finalErrors);
-      
+
       // If no errors, submit the form
       if (Object.keys(finalErrors).length === 0) {
         handleSubmitForm();
@@ -578,19 +582,16 @@ function MentorRegister() {
         });
       }
 
-      // Prepare education metadata from education text
-      const education = [];
-      if (formData.education) {
-        // Parse education text into structured format if needed
-        // For now, we'll send it as a single entry
-        education.push({
-          university_name: formData.education,
-          degree_name: "",
-          year_graduated: null,
+      // Prepare education metadata from education array
+      const education = (formData.education || [])
+        .map((edu) => ({
+          university_name: edu.institution || "",
+          degree_name: edu.degree || "",
+          year_graduated: edu.year ? parseInt(edu.year) : null,
           grade_gpa: null,
           activities: null,
-        });
-      }
+        }))
+        .filter((edu) => edu.university_name || edu.degree_name); // Only include entries with at least one field
 
       // Prepare registration data
       const registrationData = {
@@ -904,21 +905,23 @@ function MentorRegister() {
               </Typography>
               <InputGrid>
                 {/* ✅ Industry Dropdown */}
-                <FormControl 
-                  fullWidth 
+                <FormControl
+                  fullWidth
                   error={touched.industry && !!errors.industry}
-                  sx={{ 
+                  sx={{
                     mb: 2,
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '12px',
-                      backgroundColor: '#f9fafb'
-                    }
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "12px",
+                      backgroundColor: "#f9fafb",
+                    },
                   }}
                 >
                   <InputLabel>Industry *</InputLabel>
                   <Select
                     value={formData.industry}
-                    onChange={(e) => handleInputChange("industry", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("industry", e.target.value)
+                    }
                     onBlur={() => handleBlur("industry")}
                     label="Industry *"
                     disabled={loadingData}
@@ -935,21 +938,23 @@ function MentorRegister() {
                 </FormControl>
 
                 {/* ✅ Position Dropdown (filtered by industry) */}
-                <FormControl 
-                  fullWidth 
+                <FormControl
+                  fullWidth
                   error={touched.position && !!errors.position}
-                  sx={{ 
+                  sx={{
                     mb: 2,
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '12px',
-                      backgroundColor: '#f9fafb'
-                    }
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "12px",
+                      backgroundColor: "#f9fafb",
+                    },
                   }}
                 >
                   <InputLabel>Position *</InputLabel>
                   <Select
                     value={formData.position}
-                    onChange={(e) => handleInputChange("position", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("position", e.target.value)
+                    }
                     onBlur={() => handleBlur("position")}
                     label="Position *"
                     disabled={!formData.industry || loadingData}
@@ -969,7 +974,9 @@ function MentorRegister() {
                     <FormHelperText>{errors.position}</FormHelperText>
                   )}
                   {!formData.industry && (
-                    <FormHelperText>Please select an industry first</FormHelperText>
+                    <FormHelperText>
+                      Please select an industry first
+                    </FormHelperText>
                   )}
                 </FormControl>
               </InputGrid>
@@ -1044,19 +1051,159 @@ function MentorRegister() {
               </InputGrid>
 
               <Box sx={{ margin: "16px 0" }}>
-                <Typography
-                  variant="subtitle1"
-                  sx={{ fontWeight: 700, color: "#111827", marginBottom: 0.5 }}
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 2,
+                  }}
                 >
-                  Education
-                </Typography>
-                <TextArea
-                  placeholder="e.g., B.S. Computer Science, Stanford University, 2020"
-                  value={formData.education}
-                  onChange={(e) =>
-                    handleInputChange("education", e.target.value)
-                  }
-                />
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontWeight: 700,
+                      color: "#06112E",
+                      fontSize: "1.1rem",
+                    }}
+                  >
+                    Education
+                  </Typography>
+                  <Button
+                    variant="secondary"
+                    startIcon={<AddIcon />}
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        education: [
+                          ...(prev.education || []),
+                          { degree: "", year: "", institution: "" },
+                        ],
+                      }));
+                    }}
+                  >
+                    Add Education
+                  </Button>
+                </Box>
+
+                {formData.education && formData.education.length > 0 ? (
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {formData.education.map((edu, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          display: "flex",
+                          gap: 1,
+                          alignItems: "flex-start",
+                        }}
+                      >
+                        <Grid container spacing={1} sx={{ flex: 1 }}>
+                          <Grid item xs={12} sm={4}>
+                            <TextField
+                              fullWidth
+                              placeholder="Degree"
+                              value={edu.degree || ""}
+                              onChange={(e) => {
+                                const newEducation = [...formData.education];
+                                newEducation[index] = {
+                                  ...newEducation[index],
+                                  degree: e.target.value,
+                                };
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  education: newEducation,
+                                }));
+                              }}
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  borderRadius: 1,
+                                },
+                              }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={4}>
+                            <TextField
+                              fullWidth
+                              placeholder="Year"
+                              value={edu.year || ""}
+                              onChange={(e) => {
+                                const newEducation = [...formData.education];
+                                newEducation[index] = {
+                                  ...newEducation[index],
+                                  year: e.target.value,
+                                };
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  education: newEducation,
+                                }));
+                              }}
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  borderRadius: 1,
+                                },
+                              }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={4}>
+                            <TextField
+                              fullWidth
+                              placeholder="Institution"
+                              value={edu.institution || ""}
+                              onChange={(e) => {
+                                const newEducation = [...formData.education];
+                                newEducation[index] = {
+                                  ...newEducation[index],
+                                  institution: e.target.value,
+                                };
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  education: newEducation,
+                                }));
+                              }}
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  borderRadius: 1,
+                                },
+                              }}
+                            />
+                          </Grid>
+                        </Grid>
+                        <IconButton
+                          onClick={() => {
+                            const newEducation = formData.education.filter(
+                              (_, i) => i !== index
+                            );
+                            setFormData((prev) => ({
+                              ...prev,
+                              education: newEducation,
+                            }));
+                          }}
+                          sx={{
+                            color: "#d32f2f",
+                            mt: 1,
+                            p: 0.5,
+                            "&:hover": {
+                              bgcolor: "#ffebee",
+                            },
+                          }}
+                          size="small"
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography
+                    variant="body2"
+                    sx={{ color: "#666", fontStyle: "italic", py: 2 }}
+                  >
+                    No education entries. Click "Add Education" to add your
+                    educational background.
+                  </Typography>
+                )}
               </Box>
 
               <Box sx={{ margin: "16px 0" }}>
@@ -1088,12 +1235,18 @@ function MentorRegister() {
                   }}
                 />
                 <Typography variant="body2" color="text.secondary">
-                  I agree to the{' '}
-                  <RouterLink to="/terms" style={{ color: '#1976d2', textDecoration: 'underline' }}>
+                  I agree to the{" "}
+                  <RouterLink
+                    to="/terms"
+                    style={{ color: "#1976d2", textDecoration: "underline" }}
+                  >
                     Terms and Conditions
-                  </RouterLink>
-                  {' '}and{' '}
-                  <RouterLink to="/privacy" style={{ color: '#1976d2', textDecoration: 'underline' }}>
+                  </RouterLink>{" "}
+                  and{" "}
+                  <RouterLink
+                    to="/privacy"
+                    style={{ color: "#1976d2", textDecoration: "underline" }}
+                  >
                     Privacy Policy
                   </RouterLink>
                   .
@@ -1159,16 +1312,24 @@ function MentorRegister() {
               <strong>Step 1: Verify Your Email</strong>
             </Typography>
             <Typography variant="body2" paragraph sx={{ pl: 2 }}>
-              We've sent a verification email to your inbox. Please check your email and click the verification link to activate your account.
+              We've sent a verification email to your inbox. Please check your
+              email and click the verification link to activate your account.
             </Typography>
             <Typography variant="body1" paragraph sx={{ mt: 2 }}>
               <strong>Step 2: Admin Review</strong>
             </Typography>
             <Typography variant="body2" paragraph sx={{ pl: 2 }}>
-              After you verify your email, your application will be reviewed by our admin team. You will receive an email notification once a decision has been made.
+              After you verify your email, your application will be reviewed by
+              our admin team. You will receive an email notification once a
+              decision has been made.
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
-              Note: You cannot log in until both email verification and admin approval are complete.
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 2, fontStyle: "italic" }}
+            >
+              Note: You cannot log in until both email verification and admin
+              approval are complete.
             </Typography>
           </DialogContentText>
         </DialogContent>

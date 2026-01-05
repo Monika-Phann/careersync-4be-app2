@@ -89,12 +89,7 @@ export const BookingCard = styled(Box)(({ theme }) => ({
   padding: 32,
   borderRadius: 16,
   boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-  position: "sticky",
-  top: 100,
-  [theme.breakpoints.down("md")]: {
-    position: "relative",
-    top: 0,
-  },
+  position: "relative", // Normal flow - scrolls with content
 }));
 
 export const PriceTag = styled(Typography)({

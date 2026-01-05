@@ -32,6 +32,7 @@ import IndustryManagement from '../pages/Admin/IndustryManagement'
 import PositionManagement from '../pages/Admin/PositionManagement'
 import TermsAndConditions from '../pages/TermsAndConditions/TermsAndConditions'
 import PrivacyPolicy from '../pages/PrivacyPolicy/PrivacyPolicy'
+import NotFound from '../components/NotFound/NotFound'
 
 function AppRoutes() {
   return (
@@ -62,6 +63,7 @@ function AppRoutes() {
       <Route path="/mentor-login" element={<MentorRegister />} />
 
       {/* --- User Account & Dashboard --- */}
+      <Route path="/student/dashboard" element={<ProfilePage />} /> {/* Alias for /account */}
       <Route path="/account" element={<ProfilePage />} />
       <Route path="/account/security" element={<AccountSecurity />} />
       <Route path="/account/bookings" element={<BookingHistory />} />
@@ -72,6 +74,9 @@ function AppRoutes() {
       <Route path="/admin/mentors/:id" element={<MentorDetail />} />
       <Route path="/admin/industries" element={<IndustryManagement />} />
       <Route path="/admin/positions" element={<PositionManagement />} />
+
+      {/* --- 404 Catch-All Route --- */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }

@@ -867,21 +867,39 @@ function SessionProfile() {
               ) : (
                 <Box sx={SessionProfileStyles.educationTimeline}>
                   {profileData.education && profileData.education.length > 0 ? (
-                    profileData.education
-                      .filter(edu => edu.degree || edu.institution || edu.year) // Filter out empty entries
-                      .map((edu, index) => (
+                    (() => {
+                      // Sort education: Bachelor's first, then Master's, then higher degrees
+                      const sortedEducation = [...profileData.education]
+                        .filter(edu => edu.degree || edu.institution || edu.year || edu.degree_name || edu.university_name || edu.year_graduated)
+                        .sort((a, b) => {
+                          const getDegreeLevel = (degreeName) => {
+                            if (!degreeName) return 999;
+                            const degree = (degreeName || '').toLowerCase();
+                            if (degree.includes('bachelor') || degree.includes('b.s') || degree.includes('b.a') || degree.includes('b.eng') || degree.includes('bsc') || degree.includes('ba')) return 1;
+                            if (degree.includes('master') || degree.includes('m.s') || degree.includes('m.a') || degree.includes('m.eng') || degree.includes('msc') || degree.includes('ma') || degree.includes('mba')) return 2;
+                            if (degree.includes('phd') || degree.includes('doctorate') || degree.includes('d.phil')) return 3;
+                            if (degree.includes('associate') || degree.includes('a.s') || degree.includes('aa')) return 0;
+                            return 999;
+                          };
+                          const degreeA = a.degree || a.degree_name || '';
+                          const degreeB = b.degree || b.degree_name || '';
+                          return getDegreeLevel(degreeA) - getDegreeLevel(degreeB);
+                        });
+                      
+                      return sortedEducation.map((edu, index) => (
                         <Box key={index} sx={SessionProfileStyles.educationItem}>
                           <Box sx={SessionProfileStyles.timelineDot} />
                           <Box sx={SessionProfileStyles.educationContent}>
                             <Typography variant="subtitle1" sx={SessionProfileStyles.educationDegree}>
-                              {edu.degree || 'Degree'} • {edu.year || 'Year'}
+                              {edu.degree || edu.degree_name || 'Degree'} • {edu.year || edu.year_graduated || 'Year'}
                             </Typography>
                             <Typography variant="body2" sx={SessionProfileStyles.educationUniversity}>
-                              {edu.institution || 'Institution'}
+                              {edu.institution || edu.university_name || 'Institution'}
                             </Typography>
                           </Box>
                         </Box>
-                      ))
+                      ));
+                    })()
                   ) : (
                     <Typography variant="body2" sx={{ color: '#999999', fontStyle: 'italic', paddingLeft: '32px' }}>
                       No education entries added yet

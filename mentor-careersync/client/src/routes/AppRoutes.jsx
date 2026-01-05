@@ -20,6 +20,7 @@ import SessionProfile from '../pages/SessionProfile/SessionProfile'
 import SessionSchedule from '../pages/SessionSchedule/SessionSchedule'
 import AllAvailableTimes from '../pages/SessionSchedule/AllAvailableTimes'
 import MentorProfile from '../pages/MentorProfile/MentorProfile'
+import NotFound from '../components/NotFound/NotFound'
 
 function AppRoutes() {
   return (
@@ -33,6 +34,7 @@ function AppRoutes() {
       {/* Protected Dashboard Routes */}
       <Route path="/" element={<DashboardLayout />}>
         <Route index element={<Home />} />
+        <Route path="mentor/dashboard" element={<Home />} /> {/* Alias for home dashboard */}
         <Route path="about" element={<About />} />
         <Route path="services" element={<Services />} />
         <Route path="contact" element={<Contact />} />
@@ -50,6 +52,9 @@ function AppRoutes() {
         <Route path="session-schedule" element={<SessionSchedule />} />
         <Route path="session-schedule/available-times" element={<AllAvailableTimes />} />
       </Route>
+
+      {/* --- 404 Catch-All Route --- */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }

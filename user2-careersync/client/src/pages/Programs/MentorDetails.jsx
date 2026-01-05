@@ -271,42 +271,102 @@ export default function MentorDetails() {
               Education
             </Typography>
             {Array.isArray(mentor?.MentorEducations) && mentor.MentorEducations.length > 0 ? (
-              <Box>
-                {mentor.MentorEducations.map((edu, index) => (
-                  <Box key={edu.id || index} sx={{ position: 'relative', pl: 3, pb: index < mentor.MentorEducations.length - 1 ? 3 : 0 }}>
-                    {index < mentor.MentorEducations.length - 1 && (
+              <Box sx={{ 
+                position: 'relative',
+                paddingLeft: '32px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '24px',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: '8px',
+                  top: '0',
+                  bottom: '0',
+                  width: '2px',
+                  backgroundColor: '#030C2B',
+                }
+              }}>
+                {/* Sort education: Bachelor's first, then Master's, then higher degrees */}
+                {(() => {
+                  const sortedEducation = [...mentor.MentorEducations].sort((a, b) => {
+                    const getDegreeLevel = (degreeName) => {
+                      if (!degreeName) return 999;
+                      const degree = degreeName.toLowerCase();
+                      if (degree.includes('bachelor') || degree.includes('b.s') || degree.includes('b.a') || degree.includes('b.eng') || degree.includes('bsc') || degree.includes('ba')) return 1;
+                      if (degree.includes('master') || degree.includes('m.s') || degree.includes('m.a') || degree.includes('m.eng') || degree.includes('msc') || degree.includes('ma') || degree.includes('mba')) return 2;
+                      if (degree.includes('phd') || degree.includes('doctorate') || degree.includes('d.phil')) return 3;
+                      if (degree.includes('associate') || degree.includes('a.s') || degree.includes('aa')) return 0;
+                      return 999;
+                    };
+                    return getDegreeLevel(a.degree_name) - getDegreeLevel(b.degree_name);
+                  });
+                  
+                  return sortedEducation.map((edu, index) => (
+                    <Box 
+                      key={edu.id || index} 
+                      sx={{ 
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        padding: 0,
+                        marginBottom: 0,
+                        minHeight: '48px',
+                        width: '100%',
+                      }}
+                    >
+                      {/* Timeline dot - matching mentor platform style */}
                       <Box
                         sx={{
                           position: 'absolute',
-                          left: '7px',
-                          top: '24px',
-                          bottom: '-12px',
-                          width: '2px',
-                          bgcolor: '#4A90E2',
+                          left: '-32px',
+                          top: '0.35em',
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          backgroundColor: '#E0E0E0',
+                          border: 'none',
+                          zIndex: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transform: 'translateY(-50%)',
+                          '&::after': {
+                            content: '""',
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '50%',
+                            backgroundColor: '#030C2B',
+                          },
                         }}
                       />
-                    )}
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        left: 0,
-                        top: '20px',
-                        width: '14px',
-                        height: '14px',
-                        borderRadius: '50%',
-                        bgcolor: '#4A90E2',
-                        border: '3px solid #fff',
-                        zIndex: 1,
-                      }}
-                    />
-                    <Typography variant="body1" fontWeight={600} sx={{ color: '#6B7A90', mb: 0.5 }}>
-                      {edu.degree_name || ''}{edu.year_graduated ? ` • ${edu.year_graduated}` : ''}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#6B7A90' }}>
-                      {edu.university_name || ''}
-                    </Typography>
-                  </Box>
-                ))}
+                      <Box sx={{ flex: 1 }}>
+                        <Typography 
+                          variant="subtitle1" 
+                          sx={{ 
+                            fontWeight: 400,
+                            color: '#666666',
+                            fontSize: '14px',
+                            lineHeight: 1.6,
+                            marginBottom: '4px',
+                          }}
+                        >
+                          {edu.degree_name || 'Degree'} • {edu.year_graduated || 'Year'}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: '#999999',
+                            fontSize: '14px',
+                            fontWeight: 400,
+                          }}
+                        >
+                          {edu.university_name || 'Institution'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ));
+                })()}
               </Box>
             ) : (
               <Typography variant="body2" sx={{ color: '#6B7A90' }}>
