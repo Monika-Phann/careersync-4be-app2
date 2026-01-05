@@ -224,8 +224,7 @@ async function resetPasswordRequest(email) {
   });
 
   // ✅ Point to the Student Frontend for password reset
-  const frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
-  if (!frontendUrl) throw new Error('CLIENT_BASE_URL_PUBLIC or FRONTEND_URL environment variable is required');
+  const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || 'http://localhost:5174';
   const resetUrl = `${frontendUrl}/reset/${resetToken}`;
   
   const html = `

@@ -98,12 +98,17 @@ exports.showResetPasswordForm = async (req, res) => {
   try {
     const { token } = req.params;
     
+    if (!token) {
+      const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || 'http://localhost:5174';
+      return res.redirect(`${frontendUrl}/reset?error=invalid`);
+    }
+    
     // Validate token exists and is not expired
     const { User } = require('../models');
     const user = await User.findOne({ where: { reset_token: token } });
     
-    // Use the hardcoded production URL to be safe, or fallback to env
-    const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || 'https://careersync-4be.ptascloud.online';
+    // Use environment variable with fallbacks for frontend URL
+    const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || 'http://localhost:5174';
 
     if (!user) {
       return res.redirect(`${frontendUrl}/reset/${token}?error=invalid`);
@@ -117,7 +122,7 @@ exports.showResetPasswordForm = async (req, res) => {
     res.redirect(`${frontendUrl}/reset/${token}`);
   } catch (err) {
     console.error('Error showing reset password form:', err);
-    const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || 'https://careersync-4be.ptascloud.online';
+    const frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || 'http://localhost:5174';
     res.redirect(`${frontendUrl}/reset?error=invalid`);
   }
 };
