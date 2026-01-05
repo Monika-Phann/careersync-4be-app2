@@ -100,7 +100,12 @@ const profileValidationSchema = yup.object({
   dob: yup
     .string()
     .nullable()
-    .required('Date of birth is required'),
+    .required('Date of birth is required')
+    .test('valid-date', 'Please enter a valid date', function(value) {
+      if (!value || value.trim() === '') return false;
+      const date = new Date(value);
+      return !isNaN(date.getTime());
+    }),
   jobTitle: yup
     .string()
     .trim()
@@ -370,11 +375,16 @@ function Settings() {
       // Prepare data for validation - normalize empty strings to null for optional fields
       const dataToValidate = {
         ...accountData,
+        // Normalize empty strings to null for optional fields
         socialMedia: (accountData.socialMedia && accountData.socialMedia.trim()) || null,
         companyName: (accountData.companyName && accountData.companyName.trim()) || null,
         expertiseAreas: (accountData.expertiseAreas && accountData.expertiseAreas.trim()) || null,
         aboutMentor: (accountData.aboutMentor && accountData.aboutMentor.trim()) || null,
         meetingLocation: (accountData.meetingLocation && accountData.meetingLocation.trim()) || null,
+        // Normalize gender: empty string to null
+        gender: (accountData.gender && accountData.gender.trim()) || null,
+        // Normalize dob: empty string to null, but keep valid dates
+        dob: (accountData.dob && accountData.dob.trim()) || null,
       }
       
       // Validate all fields
@@ -388,7 +398,36 @@ function Settings() {
           }
         })
         setProfileErrors(errors)
-        setError('Please fix the errors in the form')
+        
+        // Map field names to user-friendly labels
+        const fieldNameMap = {
+          firstName: 'First Name',
+          lastName: 'Last Name',
+          email: 'Email Address',
+          phoneNumber: 'Phone Number',
+          gender: 'Gender',
+          dob: 'Date of Birth',
+          jobTitle: 'Job Title',
+          companyName: 'Company Name',
+          experienceYears: 'Years of Experience',
+          expertiseAreas: 'Expertise Areas',
+          aboutMentor: 'About Mentor',
+          socialMedia: 'Social Media',
+          sessionRate: 'Session Rate',
+          meetingLocation: 'Meeting Location',
+        }
+        
+        // Show specific error messages with field names
+        const errorList = Object.entries(errors).map(([field, message]) => {
+          const fieldLabel = fieldNameMap[field] || field;
+          return `${fieldLabel}: ${message}`;
+        });
+        
+        if (errorList.length > 0) {
+          setError(`Please fix the following errors:\n• ${errorList.join('\n• ')}`)
+        } else {
+          setError('Please fix the errors in the form')
+        }
         setSaving(false)
         return
       }
@@ -1094,7 +1133,11 @@ function Settings() {
                       </Alert>
                     )}
                     {error && (
-                      <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+                      <Alert 
+                        severity="error" 
+                        sx={{ mb: 2, whiteSpace: 'pre-line' }} 
+                        onClose={() => setError(null)}
+                      >
                         {error}
                       </Alert>
                     )}
@@ -1176,19 +1219,26 @@ function Settings() {
                           <TextField
                             fullWidth
                             label="Gender"
-                            value={accountData.gender}
+                            value={accountData.gender || ''}
                             onChange={(e) => handleAccountChange('gender', e.target.value)}
+                            onBlur={() => handleFieldBlur('gender')}
+                            error={!!profileErrors.gender}
+                            helperText={profileErrors.gender}
                             sx={SettingsStyles.textField}
                           />
                         </Grid>
                         <Grid item xs={12} sm={6}>
                           <TextField
                             fullWidth
-                            label="Date of Birth"
+                            label="Date of Birth *"
                             type="date"
                             value={accountData.dob ? accountData.dob.split('T')[0] : ''}
                             onChange={(e) => handleAccountChange('dob', e.target.value)}
+                            onBlur={() => handleFieldBlur('dob')}
+                            error={!!profileErrors.dob}
+                            helperText={profileErrors.dob}
                             sx={SettingsStyles.textField}
+                            required
                             InputProps={{
                               startAdornment: (
                                 <InputAdornment position="start">

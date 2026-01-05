@@ -7,6 +7,7 @@ import FormInput from '../../../components/UI/FormInput/FormInput'
 import { AuthLayout, AuthCard, AuthForm, AuthFooter } from './AuthSignIn.styles'
 import { login as loginUser } from '../../../services/authService'
 import { useAuth } from '../../../context/AuthContext.jsx'
+import { getMentorPlatformUrl } from '../../../utils/platformUrls'
 
 function AuthSignIn() {
   const navigate = useNavigate()
@@ -121,10 +122,7 @@ function AuthSignIn() {
       console.log('User role detected:', userRole);
       
       if (userRole === 'mentor') {
-        const mentorPlatformUrl =
-          import.meta.env.VITE_CLIENT_BASE_URL_MENTOR ||
-          import.meta.env.VITE_MENTOR_PLATFORM_URL ||
-          "http://localhost:5175";
+        const mentorPlatformUrl = getMentorPlatformUrl();
         
         console.log('Mentor platform URL:', mentorPlatformUrl);
         console.log('Token available:', !!finalToken);
