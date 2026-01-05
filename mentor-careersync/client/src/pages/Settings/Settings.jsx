@@ -36,6 +36,9 @@ import {
   Business as BusinessIcon,
   Star as StarIcon,
   Link as LinkIcon,
+  ErrorOutline as ErrorOutlineIcon,
+  CheckCircleOutline as CheckCircleOutlineIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material'
 import * as yup from 'yup'
 import SettingsTabSwitcher from '../../components/Settings/SettingsTabSwitcher'
@@ -417,17 +420,15 @@ function Settings() {
           meetingLocation: 'Meeting Location',
         }
         
-        // Show specific error messages with field names
-        const errorList = Object.entries(errors).map(([field, message]) => {
-          const fieldLabel = fieldNameMap[field] || field;
-          return `${fieldLabel}: ${message}`;
-        });
+        // Store errors in a structured format for better UI display
+        const errorList = Object.entries(errors).map(([field, message]) => ({
+          field,
+          fieldLabel: fieldNameMap[field] || field,
+          message
+        }));
         
-        if (errorList.length > 0) {
-          setError(`Please fix the following errors:\n• ${errorList.join('\n• ')}`)
-        } else {
-          setError('Please fix the errors in the form')
-        }
+        // Set error as structured data (we'll handle display in the UI)
+        setError(JSON.stringify({ type: 'validation', errors: errorList }))
         setSaving(false)
         return
       }
@@ -1132,15 +1133,121 @@ function Settings() {
                         {saveSuccess}
                       </Alert>
                     )}
-                    {error && (
-                      <Alert 
-                        severity="error" 
-                        sx={{ mb: 2, whiteSpace: 'pre-line' }} 
-                        onClose={() => setError(null)}
-                      >
-                        {error}
-                      </Alert>
-                    )}
+                    {error && (() => {
+                      // Try to parse error as structured data, otherwise treat as string
+                      let errorData;
+                      try {
+                        errorData = JSON.parse(error);
+                      } catch {
+                        errorData = { type: 'simple', message: error };
+                      }
+
+                      // If it's validation errors, show friendly UI
+                      if (errorData.type === 'validation' && errorData.errors) {
+                        return (
+                          <Box
+                            sx={{
+                              mb: 3,
+                              p: 2.5,
+                              borderRadius: 2,
+                              backgroundColor: '#fff3cd',
+                              border: '1px solid #ffc107',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                              position: 'relative',
+                            }}
+                          >
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                              <ErrorOutlineIcon 
+                                sx={{ 
+                                  color: '#ff9800', 
+                                  mr: 1.5, 
+                                  fontSize: 28 
+                                }} 
+                              />
+                              <Typography 
+                                variant="h6" 
+                                sx={{ 
+                                  color: '#856404',
+                                  fontWeight: 600,
+                                  fontSize: '1.1rem'
+                                }}
+                              >
+                                Please fix the following fields:
+                              </Typography>
+                            </Box>
+                            <Box 
+                              component="ul" 
+                              sx={{ 
+                                m: 0, 
+                                pl: 3,
+                                '& li': {
+                                  mb: 1.5,
+                                  color: '#856404',
+                                  fontSize: '0.95rem',
+                                  lineHeight: 1.6,
+                                }
+                              }}
+                            >
+                              {errorData.errors.map((err, index) => (
+                                <li key={index}>
+                                  <Box component="span" sx={{ fontWeight: 600 }}>
+                                    {err.fieldLabel}
+                                  </Box>
+                                  <Box component="span" sx={{ ml: 1 }}>
+                                    - {err.message}
+                                  </Box>
+                                </li>
+                              ))}
+                            </Box>
+                            <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(255,193,7,0.3)' }}>
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  color: '#856404',
+                                  fontStyle: 'italic',
+                                  fontSize: '0.875rem'
+                                }}
+                              >
+                                💡 Tip: Check the fields highlighted in red below and fix the errors to continue.
+                              </Typography>
+                            </Box>
+                            <IconButton
+                              onClick={() => setError(null)}
+                              sx={{
+                                position: 'absolute',
+                                top: 8,
+                                right: 8,
+                                color: '#856404',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(255,193,7,0.2)',
+                                }
+                              }}
+                              size="small"
+                            >
+                              <CloseIcon />
+                            </IconButton>
+                          </Box>
+                        );
+                      }
+
+                      // Simple error message
+                      return (
+                        <Alert 
+                          severity="error" 
+                          sx={{ 
+                            mb: 2,
+                            borderRadius: 2,
+                            '& .MuiAlert-message': {
+                              fontSize: '0.95rem'
+                            }
+                          }} 
+                          onClose={() => setError(null)}
+                          icon={<ErrorOutlineIcon />}
+                        >
+                          {errorData.message || error}
+                        </Alert>
+                      );
+                    })()}
 
                     {/* Basic Information */}
                     <Box sx={{ mb: 4 }}>

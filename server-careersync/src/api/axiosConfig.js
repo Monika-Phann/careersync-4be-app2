@@ -42,15 +42,32 @@
 
 import axios from 'axios';
 
-// ❌ លុបកូដចាស់នេះចោល៖
-// const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
-// ✅ Fixed: Backend routes are /api/auth/login, not /api/v1/auth/login
-// Use /api instead of /api/v1 to match backend routes
-const API_URL = '/api'; 
+// Get API base URL from environment variables
+// Check for placeholder values and provide proper fallbacks
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
+  
+  // Don't use placeholder values
+  if (envUrl && !envUrl.includes('your-api-domain.com') && !envUrl.includes('localhost')) {
+    // Production URL provided
+    return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+  }
+  
+  // Check if we're in production mode
+  if (import.meta.env.PROD) {
+    // In production but no valid URL - try to infer from current origin
+    // This is a fallback - should be set in .env file
+    console.warn('⚠️ VITE_API_BASE_URL not set or contains placeholder. Please set it in .env file.');
+    // Return a default production API URL (you should update this)
+    return 'https://api.careersync-4be.ptascloud.online/api'; // Update with your actual API domain
+  }
+  
+  // Development fallback
+  return "http://localhost:5001/api";
+};
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5001/api",
+  baseURL: getApiBaseUrl(),
   withCredentials: true,
 });
 

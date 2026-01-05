@@ -5,9 +5,26 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../assets/css/components/positionmanagement.css';
 import Swal from 'sweetalert2'; 
 
-// ✅ FIX: ប្រើ Environment Variable ជំនួសឱ្យ localhost
-// (ត្រូវប្រាកដថាបងមាន VITE_API_URL ក្នុង .env ទាំង Local និង Server)
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// ✅ FIX: Get API URL from environment variable with proper fallback
+const getApiUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+  
+  // Don't use placeholder values
+  if (envUrl && !envUrl.includes('your-api-domain.com')) {
+    // Remove /api suffix if present (we need base URL for images)
+    return envUrl.replace(/\/api(\/v1)?$/, '');
+  }
+  
+  // Production fallback
+  if (import.meta.env.PROD) {
+    return 'https://api.careersync-4be.ptascloud.online'; // Update with your actual API domain
+  }
+  
+  // Development fallback
+  return 'http://localhost:5001';
+};
+
+const API_URL = getApiUrl();
 
 const PositionManagement = () => {
   const [activeTab, setActiveTab] = useState('position');

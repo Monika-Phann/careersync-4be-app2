@@ -104,8 +104,20 @@ const Header = () => {
   const { user } = useAuth();
   
   const getBaseUrl = () => {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
-    return apiUrl.replace('/api/v1', '');
+    const envUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
+    
+    // Don't use placeholder values
+    if (envUrl && !envUrl.includes('your-api-domain.com')) {
+      return envUrl.replace(/\/api(\/v1)?$/, '');
+    }
+    
+    // Production fallback
+    if (import.meta.env.PROD) {
+      return 'https://api.careersync-4be.ptascloud.online'; // Update with your actual API domain
+    }
+    
+    // Development fallback
+    return 'http://localhost:5001';
   };
   const API_URL = getBaseUrl();
 

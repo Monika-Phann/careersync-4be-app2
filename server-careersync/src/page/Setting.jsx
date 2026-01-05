@@ -16,8 +16,26 @@ const SettingsPage = () => {
 
 // // ✂️ កាត់ '/api/v1' ចេញ ដើម្បីបាន Link សម្រាប់រូបភាព (ឧ. ...:3000)
 // const API_IMG_URL = API_BASE.replace('/api/v1', '');
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
-  const API_IMG_URL = API_BASE_URL.replace('/api/v1', '');
+// Get API URL with proper fallback
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+  
+  // Don't use placeholder values
+  if (envUrl && !envUrl.includes('your-api-domain.com')) {
+    return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+  }
+  
+  // Production fallback
+  if (import.meta.env.PROD) {
+    return 'https://api.careersync-4be.ptascloud.online/api'; // Update with your actual API domain
+  }
+  
+  // Development fallback
+  return 'http://localhost:5001/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+const API_IMG_URL = API_BASE_URL.replace('/api', '');
   
   // State for Password Visibility Toggle (✨ Feature ថ្មី)
   const [showPassword, setShowPassword] = useState(false);

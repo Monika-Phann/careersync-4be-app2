@@ -32,7 +32,25 @@ const UserManagement = () => {
   const [modalLoading, setModalLoading] = useState(false);
 
   const currentUser = JSON.parse(localStorage.getItem('user')) || {};
-  const API_IMG_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1').replace('/api/v1', '');
+  // Get API URL with proper fallback
+  const getApiUrl = () => {
+    const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+    
+    // Don't use placeholder values
+    if (envUrl && !envUrl.includes('your-api-domain.com')) {
+      return envUrl.replace(/\/api(\/v1)?$/, '');
+    }
+    
+    // Production fallback
+    if (import.meta.env.PROD) {
+      return 'https://api.careersync-4be.ptascloud.online'; // Update with your actual API domain
+    }
+    
+    // Development fallback
+    return 'http://localhost:5001';
+  };
+  
+  const API_IMG_URL = getApiUrl();
 
   // --- HELPER: ROLE & STATUS ---
   const getRoleBadge = (role) => <span className={`user-role-badge ${role?.toLowerCase() || 'user'}`}>{role || 'User'}</span>;
