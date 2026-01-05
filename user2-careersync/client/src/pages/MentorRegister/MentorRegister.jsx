@@ -456,7 +456,10 @@ function MentorRegister() {
       const userRole = userData.role || userData.role_name;
       if (userRole === 'mentor') {
         // Redirect mentors to the mentor platform
-        const mentorPlatformUrl = import.meta.env.VITE_MENTOR_PLATFORM_URL || 'http://localhost:5175';
+        const mentorPlatformUrl = 
+          import.meta.env.VITE_CLIENT_BASE_URL_MENTOR ||
+          import.meta.env.VITE_MENTOR_PLATFORM_URL ||
+          'http://localhost:5175';
         
         // IMPORTANT: Clear student platform auth state before redirecting
         // This ensures mentors are NOT logged in on the student platform when they return

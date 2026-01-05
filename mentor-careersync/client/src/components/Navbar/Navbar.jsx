@@ -101,7 +101,10 @@ function Navbar({ pageTitle, pageSubtitle, actionButtons, isMobile, onOpenMobile
   const handleLogout = () => {
     clearAuth();
     // Redirect to student platform homepage
-    const studentPlatformUrl = import.meta.env.VITE_STUDENT_PLATFORM_URL || 'http://localhost:5174';
+    const studentPlatformUrl = 
+      import.meta.env.VITE_CLIENT_BASE_URL_STUDENT ||
+      import.meta.env.VITE_STUDENT_PLATFORM_URL ||
+      'http://localhost:5174';
     window.location.href = studentPlatformUrl;
   };
 

@@ -45,7 +45,10 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401) {
       clearAuth();
       // Redirect to student platform homepage if session expires
-      const studentPlatformUrl = import.meta.env.VITE_STUDENT_PLATFORM_URL || 'http://localhost:5174';
+      const studentPlatformUrl = 
+        import.meta.env.VITE_CLIENT_BASE_URL_STUDENT ||
+        import.meta.env.VITE_STUDENT_PLATFORM_URL ||
+        'http://localhost:5174';
       window.location.href = studentPlatformUrl;
     }
     return Promise.reject(error);

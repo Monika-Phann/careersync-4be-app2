@@ -122,6 +122,7 @@ function AuthSignIn() {
       
       if (userRole === 'mentor') {
         const mentorPlatformUrl =
+          import.meta.env.VITE_CLIENT_BASE_URL_MENTOR ||
           import.meta.env.VITE_MENTOR_PLATFORM_URL ||
           "http://localhost:5175";
         
