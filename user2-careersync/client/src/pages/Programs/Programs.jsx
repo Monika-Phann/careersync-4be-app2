@@ -182,7 +182,15 @@ function Programs({ defaultCategory = 'All Industries' }) {
                   <Typography variant="h4" sx={{ mt: 2, fontWeight: 700 }}>
                     {item.title}
                   </Typography>
-                  <Typography variant="body1" sx={{ color: 'text.secondary', my: 2 }}>
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      color: 'text.secondary', 
+                      my: 2,
+                      flexGrow: 1, // Allow description to grow and push button down
+                      minHeight: '3em', // Minimum height for consistency
+                    }}
+                  >
                     {item.description}
                   </Typography>
                   <Button 

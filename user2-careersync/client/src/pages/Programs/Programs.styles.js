@@ -35,11 +35,17 @@ export const ProgramGrid = styled(Box)({
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
   gap: '16px',
+  alignItems: 'stretch', // Ensure all cards stretch to equal height
 })
 
 export const ProgramCardContent = styled(Box)({
-  display: 'grid',
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100%',
   gap: '10px',
+  '& > *:last-child': {
+    marginTop: 'auto', // Push button to bottom
+  },
 })
 
 export const ProgramImage = styled('img')({
