@@ -20,13 +20,29 @@ const SettingsPage = () => {
 const getApiBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
   
-  // Don't use placeholder values
-  if (envUrl && !envUrl.includes('your-api-domain.com')) {
+  // List of placeholder patterns to reject
+  const placeholderPatterns = [
+    'your-api-domain.com',
+    'your-api-domain',
+    'example.com',
+    'localhost:3000',
+  ];
+  
+  // Check if URL contains any placeholder patterns
+  const isPlaceholder = envUrl && placeholderPatterns.some(pattern => 
+    envUrl.toLowerCase().includes(pattern.toLowerCase())
+  );
+  
+  // Use environment URL if it's valid and not a placeholder
+  if (envUrl && !isPlaceholder && envUrl.startsWith('http')) {
     return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
   }
   
-  // Production fallback
-  if (import.meta.env.PROD) {
+  // Check if we're in production mode
+  if (import.meta.env.PROD || window.location.hostname !== 'localhost') {
+    if (isPlaceholder || !envUrl) {
+      console.error('⚠️ VITE_API_URL contains placeholder or is missing. Using fallback API URL.');
+    }
     return 'https://api.careersync-4be.ptascloud.online/api'; // Update with your actual API domain
   }
   

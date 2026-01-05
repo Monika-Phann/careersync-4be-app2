@@ -47,27 +47,54 @@ import axios from 'axios';
 const getApiBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
   
-  // Don't use placeholder values
-  if (envUrl && !envUrl.includes('your-api-domain.com') && !envUrl.includes('localhost')) {
-    // Production URL provided
+  // List of placeholder patterns to reject
+  const placeholderPatterns = [
+    'your-api-domain.com',
+    'your-api-domain',
+    'example.com',
+    'localhost:3000', // Old default that shouldn't be used
+  ];
+  
+  // Check if URL contains any placeholder patterns
+  const isPlaceholder = envUrl && placeholderPatterns.some(pattern => 
+    envUrl.toLowerCase().includes(pattern.toLowerCase())
+  );
+  
+  // Use environment URL if it's valid and not a placeholder
+  if (envUrl && !isPlaceholder && envUrl.startsWith('http')) {
+    // Ensure it ends with /api
     return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
   }
   
   // Check if we're in production mode
-  if (import.meta.env.PROD) {
-    // In production but no valid URL - try to infer from current origin
-    // This is a fallback - should be set in .env file
-    console.warn('⚠️ VITE_API_BASE_URL not set or contains placeholder. Please set it in .env file.');
-    // Return a default production API URL (you should update this)
-    return 'https://api.careersync-4be.ptascloud.online/api'; // Update with your actual API domain
+  if (import.meta.env.PROD || window.location.hostname !== 'localhost') {
+    // In production but no valid URL - use fallback
+    if (isPlaceholder || !envUrl) {
+      console.error('⚠️ VITE_API_BASE_URL contains placeholder or is missing. Using fallback API URL.');
+      console.error('⚠️ Please update your .env file with the correct API URL and rebuild.');
+    }
+    // Return a default production API URL
+    // TODO: Update this with your actual production API domain
+    return 'https://api.careersync-4be.ptascloud.online/api';
   }
   
   // Development fallback
   return "http://localhost:5001/api";
 };
 
+// Get the API base URL
+const apiBaseUrl = getApiBaseUrl();
+
+// Log the API URL being used (helpful for debugging)
+if (typeof window !== 'undefined') {
+  console.log('🔗 Admin Platform API Base URL:', apiBaseUrl);
+  if (apiBaseUrl.includes('your-api-domain.com')) {
+    console.error('❌ ERROR: Placeholder API URL detected! Please update your .env file and rebuild.');
+  }
+}
+
 const api = axios.create({
-  baseURL: getApiBaseUrl(),
+  baseURL: apiBaseUrl,
   withCredentials: true,
 });
 
