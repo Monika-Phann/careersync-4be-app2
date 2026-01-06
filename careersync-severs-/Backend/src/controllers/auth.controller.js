@@ -36,7 +36,7 @@ exports.verifyEmail = async (req, res) => {
     await authService.verifyEmailToken(token);
     
     // Redirect to the student frontend using env
-    let frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
+    let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
     if (!frontendUrl) {
       const isProduction = process.env.NODE_ENV === 'production' || 
                            (process.env.APP_URL && !process.env.APP_URL.includes('localhost') && !process.env.APP_URL.includes('127.0.0.1'));
@@ -44,12 +44,25 @@ exports.verifyEmail = async (req, res) => {
         ? 'https://careersync-4be.ptascloud.online' 
         : 'http://localhost:5174';
     }
-    return res.redirect(`${frontendUrl}/signin?verified=true`);
+    
+    // Ensure proper URL formatting - remove trailing slashes and ensure it's an absolute URL
+    frontendUrl = frontendUrl.trim().replace(/\/+$/, '');
+    
+    // Validate URL format - must start with http:// or https://
+    if (!frontendUrl.match(/^https?:\/\//)) {
+      console.error('Invalid frontend URL format:', frontendUrl);
+      frontendUrl = 'https://careersync-4be.ptascloud.online';
+    }
+    
+    const redirectUrl = `${frontendUrl}/signin?verified=true`;
+    
+    console.log('Email verification successful, redirecting to:', redirectUrl);
+    return res.redirect(302, redirectUrl);
 
   } catch (err) {
     console.error("Verification error:", err.message);
     // Redirect to frontend with error flag
-    let frontendUrl = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
+    let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
     if (!frontendUrl) {
       const isProduction = process.env.NODE_ENV === 'production' || 
                            (process.env.APP_URL && !process.env.APP_URL.includes('localhost') && !process.env.APP_URL.includes('127.0.0.1'));
@@ -57,7 +70,20 @@ exports.verifyEmail = async (req, res) => {
         ? 'https://careersync-4be.ptascloud.online' 
         : 'http://localhost:5174';
     }
-    return res.redirect(`${frontendUrl}/signin?error=verification_failed`);
+    
+    // Ensure proper URL formatting - remove trailing slashes and ensure it's an absolute URL
+    frontendUrl = frontendUrl.trim().replace(/\/+$/, '');
+    
+    // Validate URL format - must start with http:// or https://
+    if (!frontendUrl.match(/^https?:\/\//)) {
+      console.error('Invalid frontend URL format:', frontendUrl);
+      frontendUrl = 'https://careersync-4be.ptascloud.online';
+    }
+    
+    const redirectUrl = `${frontendUrl}/signin?error=verification_failed`;
+    
+    console.log('Email verification failed, redirecting to:', redirectUrl);
+    return res.redirect(302, redirectUrl);
   }
 };
 

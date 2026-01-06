@@ -207,9 +207,14 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import Swal from 'sweetalert2'; // ✅ 1. Import SweetAlert2
 
 const AdminLogin = () => {
-  const [email, setEmail] = useState('');
+  // Load remembered email from localStorage on mount
+  const [email, setEmail] = useState(() => {
+    return localStorage.getItem('rememberedEmail') || '';
+  });
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(false);
+  const [remember, setRemember] = useState(() => {
+    return !!localStorage.getItem('rememberedEmail');
+  });
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);

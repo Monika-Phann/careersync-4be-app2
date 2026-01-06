@@ -105,7 +105,9 @@ async function registerUser(data, fileUrl) {
   if (!frontendUrl) throw new Error('CLIENT_BASE_URL_PUBLIC or FRONTEND_URL environment variable is required');
   
   // Point to the API endpoint which handles verification logic and redirects
-  const verifyUrl = `${APP_URL}/api/auth/verify/${verifyToken}`;
+  // Ensure APP_URL is properly formatted (remove trailing slashes)
+  const apiBaseUrl = APP_URL.replace(/\/+$/, '');
+  const verifyUrl = `${apiBaseUrl}/api/auth/verify/${verifyToken}`;
   
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px;">

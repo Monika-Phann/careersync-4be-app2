@@ -175,13 +175,21 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, remember = false) => {
     const res = await api.post('/auth/login', { email, password });
     const { accessToken, user } = res.data;
     if (!accessToken || !user) {
       throw new Error('Invalid login response');
     }
     setAuthData(accessToken, user);
+    
+    // Handle remember me functionality
+    if (remember) {
+      localStorage.setItem('rememberedEmail', email.toLowerCase().trim());
+    } else {
+      localStorage.removeItem('rememberedEmail');
+    }
+    
     return user;
   };
 

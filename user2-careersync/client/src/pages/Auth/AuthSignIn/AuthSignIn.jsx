@@ -12,10 +12,15 @@ import { getMentorPlatformUrl } from '../../../utils/platformUrls'
 function AuthSignIn() {
   const navigate = useNavigate()
   const { login } = useAuth()
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    rememberMe: false,
+  
+  // Load remembered email from localStorage on mount
+  const [formData, setFormData] = useState(() => {
+    const rememberedEmail = localStorage.getItem('rememberedEmail')
+    return {
+      email: rememberedEmail || '',
+      password: '',
+      rememberMe: !!rememberedEmail,
+    }
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -145,6 +150,13 @@ function AuthSignIn() {
           setError(`Failed to redirect to mentor platform: ${redirectError.message}`);
           return;
         }
+      }
+      
+      // Handle remember me functionality
+      if (formData.rememberMe) {
+        localStorage.setItem('rememberedEmail', formData.email.toLowerCase().trim())
+      } else {
+        localStorage.removeItem('rememberedEmail')
       }
       
       login(userData, finalToken);
