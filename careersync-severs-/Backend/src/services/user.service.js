@@ -45,13 +45,19 @@ exports.getProfile = async (userId) => {
   // Convert to plain object and add full image URL
   const userData = user.toJSON();
   if (userData.AccUser && userData.AccUser.profile_image) {
-    userData.AccUser.profile_image_url = `${APP_URL}/uploads/${userData.AccUser.profile_image}`;
+    // If profile_image is already a full URL (R2), use it directly
+    // Otherwise, construct it from APP_URL (legacy local storage)
+    if (userData.AccUser.profile_image.startsWith('http')) {
+      userData.AccUser.profile_image_url = userData.AccUser.profile_image;
+    } else {
+      userData.AccUser.profile_image_url = `${APP_URL}/uploads/${userData.AccUser.profile_image}`;
+    }
   }
 
   return userData;
 };
 
-exports.updateProfile = async (userId, data, file) => {
+exports.updateProfile = async (userId, data, profileImageUrl) => {
   // First, get the current profile to preserve existing data
   const currentProfile = await AccUser.findOne({ where: { user_id: userId } });
   
@@ -85,15 +91,16 @@ exports.updateProfile = async (userId, data, file) => {
     updateData.institution_name = data.institution;
   }
 
-  // Only update profile_image if a new file is provided
-  if (file && file.filename) {
-    updateData.profile_image = file.filename;
-    console.log("Updating profile_image with filename:", file.filename);
+  // Update profile_image if a new image URL is provided (from R2 upload)
+  if (profileImageUrl) {
+    updateData.profile_image = profileImageUrl; // Store the full R2 URL
+    console.log("✅ Updating profile_image with R2 URL:", profileImageUrl);
   }
 
   // Only update if there are fields to update
   if (Object.keys(updateData).length > 0) {
     await AccUser.update(updateData, { where: { user_id: userId } });
+    console.log("✅ Profile updated in database");
   }
 
   // Fetch and return the updated profile with full image URL
@@ -102,16 +109,22 @@ exports.updateProfile = async (userId, data, file) => {
 
   console.log("Updated profile AccUser:", accUser);
   console.log("Profile image from DB:", accUser.profile_image);
-  console.log("Profile image URL from getProfile:", accUser.profile_image_url);
 
-  // Construct full profile image URL - use profile_image_url if available, otherwise construct it
-  const profileImageUrl =
-    accUser.profile_image_url ||
-    (accUser.profile_image
-      ? `${APP_URL}/uploads/${accUser.profile_image}`
-      : null);
+  // Construct full profile image URL
+  // If profile_image is already a full URL (R2), use it directly
+  // Otherwise, construct it from APP_URL (legacy local storage)
+  let finalProfileImageUrl = null;
+  if (accUser.profile_image) {
+    if (accUser.profile_image.startsWith('http')) {
+      // Already a full URL (R2)
+      finalProfileImageUrl = accUser.profile_image;
+    } else {
+      // Legacy local storage path
+      finalProfileImageUrl = `${APP_URL}/uploads/${accUser.profile_image}`;
+    }
+  }
 
-  console.log("Final profile image URL:", profileImageUrl);
+  console.log("Final profile image URL:", finalProfileImageUrl);
 
   // Return formatted profile data
   return {
@@ -125,8 +138,8 @@ exports.updateProfile = async (userId, data, file) => {
     gender: accUser.gender || "",
     status: accUser.types_user || "",
     institution: accUser.institution_name || "",
-    avatar: profileImageUrl,
-    profileImage: profileImageUrl,
+    avatar: finalProfileImageUrl,
+    profileImage: finalProfileImageUrl,
   };
 };
 
