@@ -106,7 +106,7 @@ exports.acceptBooking = async (bookingId, mentorId) => {
 
   if (timeslot) {
     await timeslot.update({
-      is_available: false,
+      is_booked: true,  // ✅ Fixed: Use correct field name (not is_available)
       booking_id: booking.id
     });
   }
@@ -286,26 +286,34 @@ exports.rejectBooking = async (bookingId, mentorId, rejection_reason) => {
     throw new Error("Cannot reject this booking");
   }
 
+  // ✅ Update booking status to cancelled
   await booking.update({
     status: "cancelled",
     cancelled_by: mentor.id
   });
 
+  // ✅ CRITICAL: Free up the timeslot so other students can book it
   if (booking.ScheduleTimeslot) {
     await booking.ScheduleTimeslot.update({
-      is_available: true,
-      booking_id: null
+      is_booked: false,  // ✅ Fixed: Use correct field name (not is_available)
+      booking_id: null   // Clear the booking reference
     });
+    console.log(`✅ Timeslot ${booking.ScheduleTimeslot.id} freed up after booking rejection`);
+  } else {
+    console.warn(`⚠️ No ScheduleTimeslot found for booking ${bookingId} - cannot free timeslot`);
   }
 
-  const menteeEmail = booking.menteeUser.User.email;
-
-  await sendEmail({
-    to: menteeEmail,
-    subject: "Booking Rejected",
-    html: `<p>Unfortunately, your mentor has rejected the booking.</p>
-           ${rejection_reason ? `<p>Reason: ${rejection_reason}</p>` : ''}`
-  });
+  // ✅ Send rejection email to student
+  const menteeEmail = booking.menteeUser?.User?.email;
+  if (menteeEmail) {
+    await sendEmail({
+      to: menteeEmail,
+      subject: "Booking Rejected",
+      html: `<p>Unfortunately, your mentor has rejected the booking.</p>
+             ${rejection_reason ? `<p>Reason: ${rejection_reason}</p>` : ''}
+             <p>The session time slot is now available for other students to book.</p>`
+    });
+  }
 
   return { rejection_reason };
 };
