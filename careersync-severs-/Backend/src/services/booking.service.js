@@ -4,7 +4,9 @@ const {
   Mentor,
   Position,
   Session,
-  ScheduleTimeslot
+  ScheduleTimeslot,
+  Invoice,
+  Payment
 } = require("../models");
 
 exports.createBooking = async (userId, data) => {
@@ -56,6 +58,91 @@ exports.createBooking = async (userId, data) => {
   slot.is_booked = true;
   slot.booking_id = booking.id;
   await slot.save();
+
+  // 6️⃣ Create/Update Invoice with booking details
+  // Check if invoice already exists for this booking
+  const existingPayment = await Payment.findOne({
+    where: { booking_id: booking.id }
+  });
+
+  let invoice;
+  const totalAmount = parseFloat(booking.total_amount || session.price);
+  
+  if (existingPayment) {
+    // Update existing invoice if payment exists
+    invoice = await Invoice.findOne({
+      where: { payment_id: existingPayment.id }
+    });
+    
+    if (invoice) {
+      await invoice.update({
+        mentor_id: mentor.id,
+        acc_user_id: accUser.id,
+        position_id: position.id,
+        total_amount: totalAmount,
+        mentor_name_snapshot: booking.mentor_name_snapshot,
+        mentor_position_snapshot: booking.position_name_snapshot,
+        acc_user_name_snapshot: booking.acc_user_name_snapshot,
+        start_date_snapshot: booking.start_date_snapshot,
+        end_date_snapshot: booking.end_date_snapshot,
+        session_price_snapshot: booking.session_price_snapshot,
+        status: booking.status === "confirmed" ? "pending" : "pending"
+      });
+      console.log('✅ Invoice updated with booking details:', invoice.id);
+    } else {
+      // Create invoice if payment exists but invoice doesn't
+      invoice = await Invoice.create({
+        payment_id: existingPayment.id,
+        mentor_id: mentor.id,
+        acc_user_id: accUser.id,
+        position_id: position.id,
+        total_amount: totalAmount,
+        mentor_name_snapshot: booking.mentor_name_snapshot,
+        mentor_position_snapshot: booking.position_name_snapshot,
+        acc_user_name_snapshot: booking.acc_user_name_snapshot,
+        start_date_snapshot: booking.start_date_snapshot,
+        end_date_snapshot: booking.end_date_snapshot,
+        session_price_snapshot: booking.session_price_snapshot,
+        payment_method_snapshot: "cash",
+        status: "pending"
+      });
+      console.log('✅ Invoice created with booking details:', invoice.id);
+    }
+  } else {
+    // Create payment and invoice for new booking
+    const commission = totalAmount * 0.20; // 20% commission
+    
+    const payment = await Payment.create({
+      booking_id: booking.id,
+      amount: totalAmount,
+      status: "pending",
+      commission: commission,
+      transaction_id: null,
+      pay_date: null
+    });
+
+    invoice = await Invoice.create({
+      payment_id: payment.id,
+      mentor_id: mentor.id,
+      acc_user_id: accUser.id,
+      position_id: position.id,
+      total_amount: totalAmount,
+      mentor_name_snapshot: booking.mentor_name_snapshot,
+      mentor_position_snapshot: booking.position_name_snapshot,
+      acc_user_name_snapshot: booking.acc_user_name_snapshot,
+      start_date_snapshot: booking.start_date_snapshot,
+      end_date_snapshot: booking.end_date_snapshot,
+      session_price_snapshot: booking.session_price_snapshot,
+      payment_method_snapshot: "cash",
+      status: "pending"
+    });
+    console.log('✅ Payment and Invoice created with booking details:', {
+      paymentId: payment.id,
+      invoiceId: invoice.id,
+      totalAmount: totalAmount,
+      mentorName: booking.mentor_name_snapshot
+    });
+  }
 
   return booking;
 };

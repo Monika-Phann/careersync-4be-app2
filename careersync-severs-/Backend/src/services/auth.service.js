@@ -109,6 +109,11 @@ async function registerUser(data, fileUrl) {
   const apiBaseUrl = APP_URL.replace(/\/+$/, '');
   const verifyUrl = `${apiBaseUrl}/api/auth/verify/${verifyToken}`;
   
+  // Ensure we're using verification token, not reset token
+  console.log('✉️ Sending VERIFICATION email to:', email);
+  console.log('✉️ Verify token (first 10 chars):', verifyToken.substring(0, 10));
+  console.log('✉️ Verify URL:', verifyUrl);
+  
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px;">
       <h2 style="color: #4F46E5;">Welcome, ${firstname || "User"}!</h2>
@@ -118,7 +123,8 @@ async function registerUser(data, fileUrl) {
     </div>
   `;
 
-  await sendEmail({ to: email, subject: "Verify your CareerSync Email", html });
+  await sendEmail({ to: email, subject: "CareerSync - Verify Your Email Address", html });
+  console.log('✅ Verification email sent successfully to:', email);
 
   return user;
 }
@@ -263,16 +269,23 @@ async function resetPasswordRequest(email) {
   
   const resetUrl = `${frontendUrl}/reset/${resetToken}`;
   
+  // Ensure we're using reset token, not verification token
+  console.log('🔐 Sending PASSWORD RESET email to:', email);
+  console.log('🔐 Reset token (first 10 chars):', resetToken.substring(0, 10));
+  console.log('🔐 Reset URL:', resetUrl);
+  
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px;">
-      <h2 style="color: #4F46E5;">Reset Password</h2>
-      <p>Click the button below to reset your password:</p>
+      <h2 style="color: #4F46E5;">Reset Your Password</h2>
+      <p>You requested to reset your password. Click the button below to set a new password:</p>
       <a href="${resetUrl}" style="background-color: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Reset Password</a>
       <p style="color: #666; font-size: 12px;">This link is valid for 1 hour.</p>
+      <p style="color: #999; font-size: 12px;">If you didn't request this password reset, please ignore this email.</p>
     </div>
   `;
 
-  await sendEmail({ to: email, subject: "CareerSync Password Reset", html });
+  await sendEmail({ to: email, subject: "CareerSync - Password Reset Request", html });
+  console.log('✅ Password reset email sent successfully to:', email);
 }
 
 async function resetPassword(token, password) {

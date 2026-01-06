@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowBack, Star, SchoolOutlined, PlayArrow, CalendarToday, AccessTime, LocationOn, Description, Business, WorkspacePremium, CheckCircle, Email, Phone, LinkedIn, InsertDriveFile } from "@mui/icons-material";
-import { Avatar, Button, Typography, Divider, Box, Alert, CircularProgress, TextField, MenuItem, Select, FormControl } from "@mui/material";
+import { Avatar, Button, Typography, Divider, Box, Alert, CircularProgress, TextField, MenuItem, Select, FormControl, Dialog, DialogTitle, DialogContent, IconButton } from "@mui/material";
+import { Close as CloseIcon, OpenInNew as OpenInNewIcon } from "@mui/icons-material";
 import { getMentorById } from "../../services/mentorService";
 import { getAvailableSessions } from "../../services/sessionService";
 
@@ -27,11 +28,13 @@ export default function MentorDetails() {
 
   const [mentor, setMentor] = useState(null);
   const [slots, setSlots] = useState([]);
+  const [sessions, setSessions] = useState([]); // Store sessions for agenda
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedSlotId, setSelectedSlotId] = useState("");
   const [selectedSlotMeetingLocation, setSelectedSlotMeetingLocation] = useState("");
   const [selectedSlotDuration, setSelectedSlotDuration] = useState("");
+  const [agendaModalOpen, setAgendaModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchMentor = async () => {
@@ -64,6 +67,9 @@ export default function MentorDetails() {
 
         const sessions = Array.isArray(res.data) ? res.data : [];
         const mySessions = sessions.filter((s) => (s?.mentor_id || s?.Mentor?.id) === id);
+        
+        // Store sessions for agenda PDF access
+        setSessions(mySessions);
 
         const nextSlots = [];
 
@@ -178,6 +184,32 @@ export default function MentorDetails() {
 
     return { id: mentor.id, name, avatar, role, company, bio, expertise, educationText, price, experienceYears, completedSessions, email, phone, linkedIn, portfolioPdf };
   }, [mentor]);
+
+  // Get the first available agenda PDF from mentor's sessions
+  const mentorAgendaPdfUrl = useMemo(() => {
+    if (!sessions || sessions.length === 0) return null;
+    
+    // Find first session with agenda_pdf
+    const sessionWithAgenda = sessions.find(s => {
+      const agendaPdf = s.agenda_pdf || s.Session?.agenda_pdf;
+      return agendaPdf && agendaPdf.trim() !== '';
+    });
+    
+    if (!sessionWithAgenda) return null;
+    
+    const agendaPdf = sessionWithAgenda.agenda_pdf || sessionWithAgenda.Session?.agenda_pdf;
+    if (!agendaPdf) return null;
+    
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+    const apiOrigin = apiBase.replace(/\/api\/?$/, '');
+    
+    // Handle both full URLs and filenames
+    if (agendaPdf.startsWith('http')) {
+      return agendaPdf;
+    }
+    
+    return `${apiOrigin}/uploads/${agendaPdf}`;
+  }, [sessions]);
 
   const isFullyBooked = (slots || []).length === 0;
 
@@ -489,6 +521,8 @@ export default function MentorDetails() {
               fullWidth
               variant="outlined"
               startIcon={<Description sx={{ color: '#33A5F6' }} />}
+              onClick={() => setAgendaModalOpen(true)}
+              disabled={!mentorAgendaPdfUrl}
               sx={{
                 borderColor: '#33A5F6',
                 color: '#33A5F6',
@@ -502,10 +536,14 @@ export default function MentorDetails() {
                 },
                 '& .MuiButton-startIcon': {
                   color: '#33A5F6'
+                },
+                '&.Mui-disabled': {
+                  borderColor: '#e0e0e0',
+                  color: '#9e9e9e'
                 }
               }}
             >
-              View Session Agenda
+              {mentorAgendaPdfUrl ? 'View Session Agenda' : 'No Agenda Available'}
             </Button>
 
             <Button 
@@ -623,6 +661,73 @@ export default function MentorDetails() {
           />
         </>
       )}
+
+      {/* Session Agenda Modal */}
+      <Dialog
+        open={agendaModalOpen}
+        onClose={() => setAgendaModalOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            height: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 2 }}>
+          <Typography variant="h5" fontWeight={700}>
+            Session Agenda
+          </Typography>
+          <IconButton onClick={() => setAgendaModalOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+          {mentorAgendaPdfUrl ? (
+            <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6">
+                  {mentorDisplay?.name}'s Session Agenda
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<OpenInNewIcon />}
+                  onClick={() => window.open(mentorAgendaPdfUrl, '_blank')}
+                >
+                  Open in New Tab
+                </Button>
+              </Box>
+              <Box
+                component="iframe"
+                src={`${mentorAgendaPdfUrl}#toolbar=1`}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 1,
+                  flex: 1,
+                  minHeight: 0,
+                  backgroundColor: '#f5f5f5',
+                }}
+                title="Session Agenda PDF"
+              />
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, py: 4 }}>
+              <Description sx={{ fontSize: 80, color: 'text.disabled' }} />
+              <Typography variant="h6" sx={{ textAlign: 'center' }}>
+                No Session Agenda Available
+              </Typography>
+              <Alert severity="info" sx={{ width: '100%', maxWidth: 500 }}>
+                This mentor hasn't uploaded a session agenda yet. Please check back later or contact the mentor directly.
+              </Alert>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
     </Container>
   );
 }
