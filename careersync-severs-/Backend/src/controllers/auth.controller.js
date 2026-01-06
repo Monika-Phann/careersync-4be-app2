@@ -36,17 +36,28 @@ exports.verifyEmail = async (req, res) => {
     await authService.verifyEmailToken(token);
     
     // Redirect to the student frontend using env
+    // IMPORTANT: Never use API URL as frontend URL
     let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
-    if (!frontendUrl) {
+    const apiUrl = process.env.APP_URL || process.env.API_URL || '';
+    
+    // Safety check: If frontendUrl is empty, missing, or points to API domain, use production fallback
+    if (!frontendUrl || frontendUrl.includes('/api') || frontendUrl.includes('api-4be') || frontendUrl === apiUrl) {
       const isProduction = process.env.NODE_ENV === 'production' || 
-                           (process.env.APP_URL && !process.env.APP_URL.includes('localhost') && !process.env.APP_URL.includes('127.0.0.1'));
+                           (apiUrl && !apiUrl.includes('localhost') && !apiUrl.includes('127.0.0.1'));
       frontendUrl = isProduction 
         ? 'https://careersync-4be.ptascloud.online' 
         : 'http://localhost:5174';
+      console.warn('⚠️ Frontend URL not set or points to API. Using fallback:', frontendUrl);
     }
     
     // Ensure proper URL formatting - remove trailing slashes and ensure it's an absolute URL
     frontendUrl = frontendUrl.trim().replace(/\/+$/, '');
+    
+    // Final safety check: Ensure it's NOT the API URL
+    if (frontendUrl.includes('api-4be') || frontendUrl === apiUrl) {
+      console.error('❌ Frontend URL still points to API! Forcing correct frontend URL.');
+      frontendUrl = 'https://careersync-4be.ptascloud.online';
+    }
     
     // Validate URL format - must start with http:// or https://
     if (!frontendUrl.match(/^https?:\/\//)) {
@@ -56,23 +67,34 @@ exports.verifyEmail = async (req, res) => {
     
     const redirectUrl = `${frontendUrl}/signin?verified=true`;
     
-    console.log('Email verification successful, redirecting to:', redirectUrl);
+    console.log('✅ Email verification successful, redirecting to:', redirectUrl);
     return res.redirect(302, redirectUrl);
 
   } catch (err) {
     console.error("Verification error:", err.message);
     // Redirect to frontend with error flag
+    // IMPORTANT: Never use API URL as frontend URL
     let frontendUrl = process.env.CLIENT_BASE_URL_STUDENT || process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL;
-    if (!frontendUrl) {
+    const apiUrl = process.env.APP_URL || process.env.API_URL || '';
+    
+    // Safety check: If frontendUrl is empty, missing, or points to API domain, use production fallback
+    if (!frontendUrl || frontendUrl.includes('/api') || frontendUrl.includes('api-4be') || frontendUrl === apiUrl) {
       const isProduction = process.env.NODE_ENV === 'production' || 
-                           (process.env.APP_URL && !process.env.APP_URL.includes('localhost') && !process.env.APP_URL.includes('127.0.0.1'));
+                           (apiUrl && !apiUrl.includes('localhost') && !apiUrl.includes('127.0.0.1'));
       frontendUrl = isProduction 
         ? 'https://careersync-4be.ptascloud.online' 
         : 'http://localhost:5174';
+      console.warn('⚠️ Frontend URL not set or points to API. Using fallback:', frontendUrl);
     }
     
     // Ensure proper URL formatting - remove trailing slashes and ensure it's an absolute URL
     frontendUrl = frontendUrl.trim().replace(/\/+$/, '');
+    
+    // Final safety check: Ensure it's NOT the API URL
+    if (frontendUrl.includes('api-4be') || frontendUrl === apiUrl) {
+      console.error('❌ Frontend URL still points to API! Forcing correct frontend URL.');
+      frontendUrl = 'https://careersync-4be.ptascloud.online';
+    }
     
     // Validate URL format - must start with http:// or https://
     if (!frontendUrl.match(/^https?:\/\//)) {
@@ -82,7 +104,7 @@ exports.verifyEmail = async (req, res) => {
     
     const redirectUrl = `${frontendUrl}/signin?error=verification_failed`;
     
-    console.log('Email verification failed, redirecting to:', redirectUrl);
+    console.log('❌ Email verification failed, redirecting to:', redirectUrl);
     return res.redirect(302, redirectUrl);
   }
 };
