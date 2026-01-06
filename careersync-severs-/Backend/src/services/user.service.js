@@ -52,16 +52,38 @@ exports.getProfile = async (userId) => {
 };
 
 exports.updateProfile = async (userId, data, file) => {
-  // Build update object - only include profile_image if file is provided
-  const updateData = {
-    first_name: data.firstname,
-    last_name: data.lastname,
-    phone: data.phone,
-    gender: data.gender,
-    dob: data.dob || null,
-    types_user: data.currentstatus,
-    institution_name: data.institution,
-  };
+  // First, get the current profile to preserve existing data
+  const currentProfile = await AccUser.findOne({ where: { user_id: userId } });
+  
+  if (!currentProfile) {
+    throw new Error("User profile not found");
+  }
+
+  // Build update object - only update fields that are explicitly provided
+  // This prevents clearing fields that weren't included in the update
+  const updateData = {};
+  
+  if (data.firstname !== undefined && data.firstname !== null) {
+    updateData.first_name = data.firstname;
+  }
+  if (data.lastname !== undefined && data.lastname !== null) {
+    updateData.last_name = data.lastname;
+  }
+  if (data.phone !== undefined && data.phone !== null) {
+    updateData.phone = data.phone;
+  }
+  if (data.gender !== undefined && data.gender !== null) {
+    updateData.gender = data.gender;
+  }
+  if (data.dob !== undefined) {
+    updateData.dob = data.dob || null; // Allow null for dob
+  }
+  if (data.currentstatus !== undefined && data.currentstatus !== null) {
+    updateData.types_user = data.currentstatus;
+  }
+  if (data.institution !== undefined && data.institution !== null) {
+    updateData.institution_name = data.institution;
+  }
 
   // Only update profile_image if a new file is provided
   if (file && file.filename) {
@@ -69,8 +91,10 @@ exports.updateProfile = async (userId, data, file) => {
     console.log("Updating profile_image with filename:", file.filename);
   }
 
-  // Update the profile
-  await AccUser.update(updateData, { where: { user_id: userId } });
+  // Only update if there are fields to update
+  if (Object.keys(updateData).length > 0) {
+    await AccUser.update(updateData, { where: { user_id: userId } });
+  }
 
   // Fetch and return the updated profile with full image URL
   const updatedProfile = await exports.getProfile(userId);

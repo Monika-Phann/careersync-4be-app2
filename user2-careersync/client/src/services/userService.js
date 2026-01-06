@@ -87,62 +87,64 @@ export async function updateProfile(data) {
     let payload
     let config = {}
     
+    const transformStatusForDB = (status) => {
+      if (!status) return ''
+      const lower = status.toLowerCase()
+      if (lower === 'student') return 'student'
+      if (lower === 'working') return 'professional'
+      if (lower === 'professional') return 'professional'
+      if (lower === 'institution') return 'institution'
+      return lower
+    }
+    
     if (hasFile) {
       const formData = new FormData()
       
-      Object.keys(data).forEach(key => {
-        if (key === 'profileImage' && data[key] instanceof File) {
-          formData.append('profileImage', data[key])
-        } else if (key === 'firstName') {
-          formData.append('firstname', data[key])
-        } else if (key === 'lastName') {
-          formData.append('lastname', data[key])
-        } else if (key === 'status') {
-          const transformStatusForDB = (status) => {
-            if (!status) return ''
-            const lower = status.toLowerCase()
-            if (lower === 'student') return 'student'
-            if (lower === 'working') return 'professional'
-            if (lower === 'professional') return 'professional'
-            if (lower === 'institution') return 'institution'
-            return lower
-          }
-          const dbStatus = transformStatusForDB(data[key])
-          formData.append('currentstatus', dbStatus)
-        } else if (key === 'gender') {
-          const lowercaseGender = data[key] ? data[key].toLowerCase() : ''
-          formData.append('gender', lowercaseGender)
-        } else if (key === 'institution') {
-          formData.append('institution', data[key])
-        } else if (data[key] != null && key !== 'avatar' && key !== 'profileImage') {
-          formData.append(key, data[key])
-        }
-      })
+      // Always include all fields, even if they haven't changed
+      if (data.firstName !== undefined) {
+        formData.append('firstname', data.firstName || '')
+      }
+      if (data.lastName !== undefined) {
+        formData.append('lastname', data.lastName || '')
+      }
+      if (data.phone !== undefined) {
+        formData.append('phone', data.phone || '')
+      }
+      if (data.dob !== undefined) {
+        formData.append('dob', data.dob || '')
+      }
+      if (data.gender !== undefined) {
+        const lowercaseGender = data.gender ? data.gender.toLowerCase() : ''
+        formData.append('gender', lowercaseGender)
+      }
+      if (data.status !== undefined) {
+        const dbStatus = transformStatusForDB(data.status)
+        formData.append('currentstatus', dbStatus)
+      }
+      if (data.institution !== undefined) {
+        formData.append('institution', data.institution || '')
+      }
+      
+      // Only append file if it's actually a File object
+      if (data.profileImage instanceof File) {
+        formData.append('profileImage', data.profileImage)
+      }
       
       payload = formData
       config = {}
     } else {
       const lowercaseGender = data.gender ? data.gender.toLowerCase() : ''
-      
-      const transformStatusForDB = (status) => {
-        if (!status) return ''
-        const lower = status.toLowerCase()
-        if (lower === 'student') return 'student'
-        if (lower === 'working') return 'professional'
-        if (lower === 'professional') return 'professional'
-        if (lower === 'institution') return 'institution'
-        return lower
-      }
       const dbStatus = transformStatusForDB(data.status)
       
+      // Always include all fields
       payload = {
-        firstname: data.firstName,
-        lastname: data.lastName,
-        phone: data.phone,
+        firstname: data.firstName !== undefined ? data.firstName : '',
+        lastname: data.lastName !== undefined ? data.lastName : '',
+        phone: data.phone !== undefined ? data.phone : '',
         gender: lowercaseGender,
-        dob: data.dob,
+        dob: data.dob !== undefined ? data.dob : '',
         currentstatus: dbStatus,
-        institution: data.institution
+        institution: data.institution !== undefined ? data.institution : ''
       }
     }
     

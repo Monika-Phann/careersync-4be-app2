@@ -129,24 +129,34 @@ export default function ProfilePage() {
     }
   }, [profile, fetchProfile, updateUser]);
 
-  // Sync formData when profile updates
+  // Sync formData when profile updates (but don't overwrite if user is editing)
   useEffect(() => {
-    if (profile) {
+    if (profile && !isEditing) {
       const imageUrl = profile.avatar || profile.profileImage || null;
-      setFormData((prev) => ({
-        ...prev,
-        firstName: profile.firstName || prev.firstName,
-        lastName: profile.lastName || prev.lastName,
-        phone: profile.phone || prev.phone,
-        dob: profile.dob || prev.dob,
-        gender: profile.gender || prev.gender,
-        status: profile.status || prev.status,
-        institution: profile.institution || prev.institution,
-        avatar: imageUrl || prev.avatar,
-        profileImage: imageUrl || prev.profileImage,
-      }));
+      
+      // Only update image if we have a server URL (not a blob preview from upload)
+      const shouldUpdateImage = imageUrl && !imageUrl.startsWith("blob:");
+      
+      setFormData((prev) => {
+        // Don't update if user is currently editing
+        if (isEditing) return prev;
+        
+        return {
+          ...prev,
+          firstName: profile.firstName || prev.firstName,
+          lastName: profile.lastName || prev.lastName,
+          phone: profile.phone || prev.phone,
+          dob: profile.dob || prev.dob,
+          gender: profile.gender || prev.gender,
+          status: profile.status || prev.status,
+          institution: profile.institution || prev.institution,
+          // Only update image if we have a server URL (not a blob preview)
+          avatar: shouldUpdateImage ? imageUrl : prev.avatar,
+          profileImage: shouldUpdateImage ? imageUrl : prev.profileImage,
+        };
+      });
     }
-  }, [profile]);
+  }, [profile, isEditing]);
 
   const schema = Yup.object({
     profilePicture: Yup.mixed().nullable().notRequired(),
@@ -182,15 +192,57 @@ export default function ProfilePage() {
         URL.revokeObjectURL(formData.avatar);
       }
 
-      const updatedProfile = await updateProfile(formData);
+      // Ensure all required fields are included in the update
+      const updateData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        dob: formData.dob,
+        gender: formData.gender,
+        status: formData.status,
+        institution: formData.institution,
+        profileImage: formData.profileImage, // File object or null
+        avatar: formData.avatar, // Preview URL (blob) or existing URL
+      };
+
+      const updatedProfile = await updateProfile(updateData);
 
       if (updatedProfile) {
+        // Refresh profile from server to get latest data
+        await fetchProfile();
+        
+        // Update formData with the response from server
+        const imageUrl = updatedProfile.avatar || updatedProfile.profileImage;
+        setFormData({
+          firstName: updatedProfile.firstName || formData.firstName,
+          lastName: updatedProfile.lastName || formData.lastName,
+          phone: updatedProfile.phone || formData.phone,
+          dob: updatedProfile.dob || formData.dob,
+          gender: updatedProfile.gender || formData.gender,
+          status: updatedProfile.status || formData.status,
+          institution: updatedProfile.institution || formData.institution,
+          avatar: imageUrl,
+          profileImage: imageUrl,
+        });
+
+        // Update backup data
+        setBackupData({
+          firstName: updatedProfile.firstName || formData.firstName,
+          lastName: updatedProfile.lastName || formData.lastName,
+          phone: updatedProfile.phone || formData.phone,
+          dob: updatedProfile.dob || formData.dob,
+          gender: updatedProfile.gender || formData.gender,
+          status: updatedProfile.status || formData.status,
+          institution: updatedProfile.institution || formData.institution,
+          avatar: imageUrl,
+          profileImage: imageUrl,
+        });
+
         setIsEditing(false);
         setSuccessMessage("Profile updated successfully!");
 
-        // Update auth context
+        // Update auth context immediately
         if (updateUser) {
-          const imageUrl = updatedProfile.avatar || updatedProfile.profileImage;
           updateUser({
             firstName: updatedProfile.firstName,
             lastName: updatedProfile.lastName,
@@ -236,12 +288,21 @@ export default function ProfilePage() {
         return;
       }
 
+      // Clean up previous blob URL if it exists
+      if (formData.avatar && formData.avatar.startsWith("blob:")) {
+        URL.revokeObjectURL(formData.avatar);
+      }
+
+      // Create preview URL for immediate display
       const previewUrl = URL.createObjectURL(file);
       setFormData({
         ...formData,
         avatar: previewUrl,
         profileImage: file,
       });
+      
+      // Clear any previous errors
+      setError(null);
     }
   };
 
