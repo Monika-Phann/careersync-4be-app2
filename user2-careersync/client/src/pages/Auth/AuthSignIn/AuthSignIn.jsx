@@ -160,7 +160,7 @@ function AuthSignIn() {
       }
       
       login(userData, finalToken);
-      navigate('/mentors');
+      navigate('/programs');
     } catch (err) {
       console.error('Login error details:', {
         error: err,

@@ -53,7 +53,7 @@ export const BrandLink = styled(Link)({
 export const NavLinks = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  gap: '24px',
+  gap: '32px',
   flex: 1,
   justifyContent: 'center',
 
@@ -168,9 +168,9 @@ export const MobileDrawer = styled(Box)(({ theme, open }) => ({
 export const MobileNavLinks = styled(Box)({
   display: 'flex',
   flexDirection: 'column',
-  padding: '80px 32px 40px', // Ample padding for a clean look
+  padding: '80px 32px 120px', // Ample padding for a clean look
   gap: '12px',
-  height: '100%',
+  flex: 1,
   overflowY: 'auto',
   alignItems: 'flex-start', // Force everything to align to the left
 });

@@ -2,6 +2,7 @@ import { Container, Grid, Typography, Button, Stack, Box, Divider, Avatar } from
 import { motion } from "framer-motion";
 import CountUp from "react-countup";
 import { useNavigate } from "react-router-dom"; // IMPORT HOOK
+import {useAuth} from '../../context/AuthContext';
 
 import { 
   MainWrapper, 
@@ -32,6 +33,16 @@ function HomePage() {
     { name: "Elena Rodriguez", role: "Civil Engineer", img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400", co: "Bechtel" },
     { name: "Samuel Green", role: "Agri-Tech Founder", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400", co: "GreenField Co." }
   ];
+
+  const { isAuthenticated } = useAuth();
+
+ const handleJoinClick = () => {
+    if (isAuthenticated) {
+      navigate('/programs'); // If logged in, go to programs
+    } else {
+      navigate('/register'); // If NOT logged in, go to register
+    }
+  };
 
   return (
     <MainWrapper>
@@ -75,7 +86,7 @@ function HomePage() {
                 variant="contained" 
                 size="large" 
                 sx={{ px: 6, py: 2, borderRadius: "16px", fontWeight: 700 }}
-                onClick={() => navigate('/mentors')} // REDIRECTS TO MENTOR BROWSE
+                onClick={() => navigate('/programs')} // REDIRECTS TO Program
               >
                 Explore Programs
               </Button>
@@ -280,7 +291,7 @@ function HomePage() {
             variant="contained" 
             size="large" 
             sx={{ px: 8, py: 2.5, borderRadius: "50px", fontSize: "1.2rem", fontWeight: 800 }}
-            onClick={() => navigate('/register')} // REDIRECTS TO STUDENT REGISTER
+            onClick={handleJoinClick} // REDIRECTS TO STUDENT REGISTER
           >
             Join Now
           </Button>

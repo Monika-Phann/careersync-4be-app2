@@ -35,12 +35,6 @@ export default function AccountTabs() {
 
   return (
     <PageWrapper>
-      {/* Top right logout button */}
-      <TopBar>
-        <LogoutButton startIcon={<LogoutIcon />} onClick={handleLogout}>
-          Logout
-        </LogoutButton>
-      </TopBar>
 
       {/* Centered Tabs */}
       <Box display="flex" justifyContent="center">

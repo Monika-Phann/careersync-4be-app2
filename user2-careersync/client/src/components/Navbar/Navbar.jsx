@@ -28,14 +28,16 @@ const guestLinks = [
   { to: '/programs', label: 'Programs' }, 
   { to: '/about', label: 'About' },
   { to: '/contact', label: 'Contact' }, 
+  { to: '/mentor-register', label: 'Become Mentor'},
+
 ];
 
 const authenticatedLinks = [
   { to: '/', label: 'Home' },
   { to: '/programs', label: 'Programs' },
-  { to: '/mentors', label: 'Find Mentors' },
   { to: '/about', label: 'About' },
   { to: '/contact', label: 'Contact' },
+  { to: '/mentor-register', label: 'Become Mentor'},
 ];
 
 function Navbar() {
@@ -161,6 +163,7 @@ function Navbar() {
         <MenuItem onClick={() => { navigate('/account'); handleMenuClose(); }}>My Profile</MenuItem>
         <MenuItem onClick={() => { navigate('/account/bookings'); handleMenuClose(); }}>My Bookings</MenuItem>
         <MenuItem onClick={() => { navigate('/account/security'); handleMenuClose(); }}>Security</MenuItem>
+        <MenuItem onClick={() => { navigate('/account/certificates'); handleMenuClose(); }}>Certificates</MenuItem>
         <Divider />
         <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>Logout</MenuItem>
       </Menu>
@@ -228,6 +231,9 @@ function Navbar() {
               </NavLink>
               <NavLink to="/account/security" onClick={() => setMobileMenuOpen(false)} active={location.pathname === '/account/security' ? 'true' : undefined}>
                 Security
+              </NavLink>
+              <NavLink to="/account/certificates" onClick={() => setMobileMenuOpen(false)} active={location.pathname === '/account/certificates' ? 'true' : undefined}>
+                Certificates
               </NavLink>
               
               <Box sx={{ pt: 2 }}>
