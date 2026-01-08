@@ -56,7 +56,80 @@ const registerSchema = yup.object({
     .string()
     .matches(/^(?:0\d{8,9}|\+855\d{8,9})$/, "Phone must start with 0 or +855")
     .required("Phone number is required"),
-  dateOfBirth: yup.string().required("Date of birth is required"),
+  dateOfBirth: yup
+    .string()
+    .required("Date of birth is required")
+    .test("date-format", "Please enter a valid date", function (value) {
+      if (!value) return true; // Let required() handle empty values
+      
+      // Check if the date string matches YYYY-MM-DD format
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(value)) {
+        return false;
+      }
+      
+      // Parse the date string (format: YYYY-MM-DD from date input)
+      const birthDate = new Date(value + 'T00:00:00'); // Add time to avoid timezone issues
+      
+      // Check if date is valid (not NaN and matches input)
+      if (isNaN(birthDate.getTime())) {
+        return false;
+      }
+      
+      // Verify the parsed date matches the input (prevents invalid dates like 1111-11-11)
+      const [year, month, day] = value.split('-').map(Number);
+      if (
+        birthDate.getFullYear() !== year ||
+        birthDate.getMonth() + 1 !== month ||
+        birthDate.getDate() !== day
+      ) {
+        return false;
+      }
+      
+      // Check if date is reasonable (not too old and not in the future)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (birthDate > today) {
+        return false; // Date cannot be in the future
+      }
+      
+      // Calculate maximum reasonable age (e.g., 120 years old)
+      const maxAge = 120;
+      const minYear = today.getFullYear() - maxAge;
+      
+      if (birthDate.getFullYear() < minYear) {
+        return false; // Date is too old (more than 120 years ago)
+      }
+      
+      return true;
+    })
+    .test("age", "You must be at least 18 years old", function (value) {
+      if (!value) return true; // Let required() handle empty values
+      
+      // Parse the date string (format: YYYY-MM-DD from date input)
+      const birthDate = new Date(value + 'T00:00:00'); // Add time to avoid timezone issues
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+      
+      // Check if date is valid
+      if (isNaN(birthDate.getTime())) {
+        return false;
+      }
+      
+      // Calculate age
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
+      
+      // Adjust age if birthday hasn't occurred this year
+      if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+        age--;
+      }
+      
+      // Must be exactly 18 or older
+      return age >= 18;
+    }),
   gender: yup.string().required("Gender is required"),
   status: yup.string().required("Current status is required"),
   institutionName: yup.string().trim().required("Institution name is required"),
@@ -88,6 +161,72 @@ function Register() {
 
   const handleFieldChange = (field) => (e) => {
     const value = e.target.value;
+    
+    // For date fields, validate format immediately
+    if (field === 'dateOfBirth' && value) {
+      // Check if date format is valid (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(value)) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          [field]: "Please enter a valid date format (YYYY-MM-DD)",
+        }));
+        setFormData((prev) => ({ ...prev, [field]: value }));
+        return;
+      }
+      
+      // Check if date is valid
+      const birthDate = new Date(value + 'T00:00:00');
+      if (isNaN(birthDate.getTime())) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          [field]: "Please enter a valid date",
+        }));
+        setFormData((prev) => ({ ...prev, [field]: value }));
+        return;
+      }
+      
+      // Verify the parsed date matches the input
+      const [year, month, day] = value.split('-').map(Number);
+      if (
+        birthDate.getFullYear() !== year ||
+        birthDate.getMonth() + 1 !== month ||
+        birthDate.getDate() !== day
+      ) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          [field]: "Please enter a valid date",
+        }));
+        setFormData((prev) => ({ ...prev, [field]: value }));
+        return;
+      }
+      
+      // Check if date is too old (more than 120 years ago)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const maxAge = 120;
+      const minYear = today.getFullYear() - maxAge;
+      
+      if (birthDate.getFullYear() < minYear) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          [field]: "Date of birth is too old. Please enter a valid date.",
+        }));
+        setFormData((prev) => ({ ...prev, [field]: value }));
+        return;
+      }
+      
+      // Check if date is in the future
+      if (birthDate > today) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          [field]: "Date of birth cannot be in the future",
+        }));
+        setFormData((prev) => ({ ...prev, [field]: value }));
+        return;
+      }
+    }
+    
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (fieldErrors[field]) {
       setFieldErrors((prev) => {
@@ -132,6 +271,78 @@ function Register() {
         setError("Please fill in all required fields correctly.");
       }
       return;
+    }
+
+    // Additional safety check: Verify date format and age is 18+ before submission
+    if (formData.dateOfBirth) {
+      // Check date format (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(formData.dateOfBirth)) {
+        setLoading(false);
+        setError("Please enter a valid date format (YYYY-MM-DD).");
+        setFieldErrors((prev) => ({ ...prev, dateOfBirth: "Please enter a valid date" }));
+        return;
+      }
+      
+      const birthDate = new Date(formData.dateOfBirth + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Check if date is valid
+      if (isNaN(birthDate.getTime())) {
+        setLoading(false);
+        setError("Please enter a valid date.");
+        setFieldErrors((prev) => ({ ...prev, dateOfBirth: "Please enter a valid date" }));
+        return;
+      }
+      
+      // Verify the parsed date matches the input (prevents invalid dates like 1111-11-11)
+      const [year, month, day] = formData.dateOfBirth.split('-').map(Number);
+      if (
+        birthDate.getFullYear() !== year ||
+        birthDate.getMonth() + 1 !== month ||
+        birthDate.getDate() !== day
+      ) {
+        setLoading(false);
+        setError("Please enter a valid date.");
+        setFieldErrors((prev) => ({ ...prev, dateOfBirth: "Please enter a valid date" }));
+        return;
+      }
+      
+      // Check if date is reasonable (not too old and not in the future)
+      if (birthDate > today) {
+        setLoading(false);
+        setError("Date of birth cannot be in the future.");
+        setFieldErrors((prev) => ({ ...prev, dateOfBirth: "Date of birth cannot be in the future" }));
+        return;
+      }
+      
+      // Calculate maximum reasonable age (e.g., 120 years old)
+      const maxAge = 120;
+      const minYear = today.getFullYear() - maxAge;
+      
+      if (birthDate.getFullYear() < minYear) {
+        setLoading(false);
+        setError("Please enter a valid date of birth. The date is too old.");
+        setFieldErrors((prev) => ({ ...prev, dateOfBirth: "Date of birth is too old. Please enter a valid date." }));
+        return;
+      }
+      
+      // Calculate age
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+        age--;
+      }
+      
+      if (age < 18) {
+        setLoading(false);
+        setError("You must be at least 18 years old to register as a student.");
+        setFieldErrors((prev) => ({ ...prev, dateOfBirth: "You must be at least 18 years old" }));
+        return;
+      }
     }
 
     setLoading(true);
@@ -407,6 +618,13 @@ function Register() {
                             error={!!fieldErrors.dateOfBirth}
                             helperText={fieldErrors.dateOfBirth}
                             InputLabelProps={{ shrink: true }}
+                            inputProps={{
+                              max: (() => {
+                                const today = new Date();
+                                today.setFullYear(today.getFullYear() - 18);
+                                return today.toISOString().split('T')[0];
+                              })()
+                            }}
                           />
                         </Grid>
 

@@ -165,7 +165,34 @@ export default function ProfilePage() {
     phone: Yup.string()
       .matches(/^(?:0\d{8,9}|\+855\d{8,9})$/, "Phone must start with 0 or +855")
       .required("Phone number is required"),
-    dob: Yup.string().required("Date of birth is required"),
+    dob: Yup.string()
+      .required("Date of birth is required")
+      .test("age", "You must be at least 18 years old", function (value) {
+        if (!value) return true; // Let required() handle empty values
+        
+        // Parse the date string (format: YYYY-MM-DD from date input)
+        const birthDate = new Date(value + 'T00:00:00'); // Add time to avoid timezone issues
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+        
+        // Check if date is valid
+        if (isNaN(birthDate.getTime())) {
+          return false;
+        }
+        
+        // Calculate age
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        const dayDiff = today.getDate() - birthDate.getDate();
+        
+        // Adjust age if birthday hasn't occurred this year
+        if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+          age--;
+        }
+        
+        // Must be exactly 18 or older
+        return age >= 18;
+      }),
     gender: Yup.string().required("Please select gender"),
     status: Yup.string().required("Please select status"),
     institution: Yup.string().trim().required("Institution is required"),
