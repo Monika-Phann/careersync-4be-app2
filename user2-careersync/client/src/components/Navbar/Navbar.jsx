@@ -51,9 +51,9 @@ function Navbar() {
   // Debug: Log user data to see what's available
   useEffect(() => {
     if (auth.isAuthenticated && auth.user) {
-      console.log('Navbar - User data:', auth.user);
-      console.log('Navbar - Avatar URL:', auth.user?.avatar || auth.user?.profileImage);
-      console.log('Navbar - First Name:', auth.user?.firstName);
+      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
+      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
+      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
     }
   }, [auth.user, auth.isAuthenticated]);
 
@@ -115,11 +115,8 @@ function Navbar() {
                     }}
                     onError={(e) => {
                       const imageUrl = auth.user?.avatar || auth.user?.profileImage;
-                      console.error('❌ Navbar Avatar failed to load:', imageUrl);
-                      console.error('Auth user data:', {
-                        avatar: auth.user?.avatar,
-                        profileImage: auth.user?.profileImage
-                      });
+                      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
+                      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
                       // Try to reload if it's an HTTP URL
                       if (imageUrl && imageUrl.startsWith('http')) {
                         setTimeout(() => {
@@ -128,7 +125,7 @@ function Navbar() {
                       }
                     }}
                     onLoad={() => {
-                      console.log('✅ Navbar Avatar loaded successfully:', auth.user?.avatar || auth.user?.profileImage);
+                      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
                     }}
                   >
                     {(!auth.user?.avatar && !auth.user?.profileImage) && (auth.user?.firstName?.[0]?.toUpperCase() || auth.user?.email?.[0]?.toUpperCase() || 'U')}

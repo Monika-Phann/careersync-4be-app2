@@ -72,14 +72,10 @@ export async function register(data) {
       }
     }
     
-    console.log('Registering user with data:', { 
-      ...data, 
-      password: '***',
-      profileImage: hasFile ? `[File: ${data.profileImage.name}]` : data.profileImage
-    })
+    console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND')
     
     const res = await axiosInstance.post('/api/auth/register', payload, config)
-    console.log('Registration response:', res.data)
+    console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND')
     return ok(res.data, res.data?.message || 'Registration successful')
   } catch (error) {
     console.error('Registration error:', {

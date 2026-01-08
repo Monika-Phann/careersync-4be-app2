@@ -61,18 +61,13 @@ function AuthSignIn() {
 
     try {
       // Normalize email
-      console.log('Attempting login for:', formData.email.toLowerCase().trim());
+      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
       const result = await loginUser({ email: formData.email.toLowerCase().trim(), password: formData.password })
       
-      console.log('Login result:', {
-        success: result.success,
-        hasData: !!result.data,
-        message: result.message,
-        dataKeys: result.data ? Object.keys(result.data) : []
-      });
+      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
       
       if (!result.success) {
-        console.error('Login failed:', result.message);
+        console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
         setError(result.message || 'Login failed. Please try again.')
         return
       }
@@ -80,13 +75,7 @@ function AuthSignIn() {
       const { user, accessToken, token } = result.data || {}
       const finalToken = accessToken || token
       
-      console.log('Token extraction:', {
-        hasUser: !!user,
-        hasAccessToken: !!accessToken,
-        hasToken: !!token,
-        finalToken: finalToken ? 'present' : 'missing',
-        userRole: user?.role || user?.role_name
-      });
+      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
 
       if (user && (user.emailVerified === false || user.email_verified === false)) {
         setError('Please verify your email before signing in.')
@@ -118,19 +107,19 @@ function AuthSignIn() {
         Mentor: user.Mentor || null
       }
 
-      console.log('=== LOGIN SUCCESS ===');
-      console.log('Cleaned Avatar URL:', userData.avatar);
-      console.log('===================');
+      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
+      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
+      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
       
       // Role-based redirection
       const userRole = user.role || user.role_name || userData.role;
-      console.log('User role detected:', userRole);
+      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
       
       if (userRole === 'mentor') {
         const mentorPlatformUrl = getMentorPlatformUrl();
         
-        console.log('Mentor platform URL:', mentorPlatformUrl);
-        console.log('Token available:', !!finalToken);
+        console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
+        console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
         
         if (!finalToken) {
           setError('Authentication token is missing. Please try logging in again.');
@@ -142,11 +131,11 @@ function AuthSignIn() {
           localStorage.removeItem('user');
           localStorage.removeItem('accessToken');
           const redirectUrl = `${mentorPlatformUrl}/auth/sso?token=${encodeURIComponent(finalToken)}`;
-          console.log('Redirecting to:', redirectUrl);
+          console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
           window.location.href = redirectUrl;
           return;
         } catch (redirectError) {
-          console.error('Redirect error:', redirectError);
+          console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
           setError(`Failed to redirect to mentor platform: ${redirectError.message}`);
           return;
         }
@@ -162,13 +151,7 @@ function AuthSignIn() {
       login(userData, finalToken);
       navigate('/programs');
     } catch (err) {
-      console.error('Login error details:', {
-        error: err,
-        message: err?.message,
-        stack: err?.stack,
-        response: err?.response?.data,
-        status: err?.response?.status
-      });
+      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
       
       // Show actual error message if available
       const errorMessage = err?.response?.data?.message 

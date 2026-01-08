@@ -18,6 +18,7 @@ import ChartCard from '../../components/UI/ChartCard/ChartCard'
 import ScheduleCard from '../../components/UI/ScheduleCard/ScheduleCard'
 import { getDashboardSummary, getTrends, getWeeklyPerformance } from '../../api/dashboardApi'
 import { getMyMentorProfile } from '../../api/mentorApi'
+import { getMyBookings, formatBookingForDisplay } from '../../services/bookingApi'
 import { getUserData } from '../../utils/auth'
 import { HomeStyles } from './Home.styles'
 
@@ -94,9 +95,65 @@ function Home() {
         }))
         setWeeklyPerformance(transformedWeekly)
         
-        // Initialize today's schedule as empty array
-        // TODO: Implement API endpoint to fetch today's schedule
-        setTodaysSchedule([])
+        // Fetch today's schedule from bookings
+        try {
+          const bookingsData = await getMyBookings()
+          const formattedBookings = bookingsData.map(formatBookingForDisplay).filter(Boolean)
+          
+          // Get today's date (start of day in local timezone)
+          const today = new Date()
+          const todayYear = today.getFullYear()
+          const todayMonth = today.getMonth()
+          const todayDay = today.getDate()
+          
+          // Filter bookings for today only (exclude cancelled/rejected)
+          const todaysBookings = formattedBookings.filter(booking => {
+            if (!booking.rawBooking?.start_date_snapshot) return false
+            
+            // Check if booking status is valid (not cancelled/rejected)
+            const status = booking.rawBooking.status?.toLowerCase()
+            if (status === 'cancelled' || status === 'rejected') return false
+            
+            // Check if booking date is today (compare year, month, day)
+            const bookingDate = new Date(booking.rawBooking.start_date_snapshot)
+            const bookingYear = bookingDate.getFullYear()
+            const bookingMonth = bookingDate.getMonth()
+            const bookingDay = bookingDate.getDate()
+            
+            return bookingYear === todayYear && 
+                   bookingMonth === todayMonth && 
+                   bookingDay === todayDay
+          })
+          
+          // Format for ScheduleCard component (time, name, duration)
+          const scheduleItems = todaysBookings
+            .sort((a, b) => {
+              // Sort by time (earliest first)
+              const timeA = new Date(a.rawBooking.start_date_snapshot).getTime()
+              const timeB = new Date(b.rawBooking.start_date_snapshot).getTime()
+              return timeA - timeB
+            })
+            .map(booking => {
+              const startDate = new Date(booking.rawBooking.start_date_snapshot)
+              const timeStr = startDate.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+              })
+              
+              return {
+                time: timeStr,
+                name: booking.user.name || 'Unknown Student',
+                duration: booking.duration || '1 hour'
+              }
+            })
+          
+          setTodaysSchedule(scheduleItems)
+        } catch (scheduleError) {
+          // If fetching today's schedule fails, set empty array
+          console.log('CAREERSYNC PLATFORM CREATING BY 4BE AT ABOVE AND BEYONG SCHOOL')
+          setTodaysSchedule([])
+        }
       } catch (err) {
         setError(
           err.response?.data?.error ||

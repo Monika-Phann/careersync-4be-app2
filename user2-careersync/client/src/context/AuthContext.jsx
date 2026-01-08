@@ -21,7 +21,7 @@ export function AuthProvider({ children }) {
         // IMPORTANT: If user is a mentor, clear auth and log them out
         // Mentors should only be authenticated on the mentor platform, not the student platform
         if (userRole === 'mentor') {
-          console.log('Mentor detected on student platform - clearing auth and logging out');
+          console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           localStorage.removeItem('accessToken');
@@ -44,7 +44,7 @@ export function AuthProvider({ children }) {
         });
       }
     } catch (err) {
-      console.error('Auth restoration failed', err);
+      console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
     } finally {
       setInitialized(true);
     }

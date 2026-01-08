@@ -29,7 +29,7 @@ export default function AccountTabs() {
   const value = tabs.findIndex(tab => location.pathname === tab.path);
 
   const handleLogout = () => {
-    console.log("User logged out");
+    console.log("CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND");
     navigate("/signin");
   };
 

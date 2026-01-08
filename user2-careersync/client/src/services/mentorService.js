@@ -181,8 +181,8 @@ export async function applyAsMentor(mentorData) {
     }
     
     // Industry and Position - sending as IDs (from dropdown)
-    console.log('📤 [applyAsMentor] Sending industry_id:', mentorData.industry);
-    console.log('📤 [applyAsMentor] Sending position_id:', mentorData.position);
+    console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
+    console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
     if (mentorData.industry) formData.append('industry_id', mentorData.industry)
     if (mentorData.position) formData.append('position_id', mentorData.position)
     
@@ -204,18 +204,11 @@ export async function applyAsMentor(mentorData) {
       formData.append('education', JSON.stringify(mentorData.education))
     }
 
-    console.log('Applying as mentor (logged-in user) with FormData:', {
-      firstName: mentorData.firstName,
-      lastName: mentorData.lastName,
-      hasProfileImage: mentorData.profilePicture instanceof File,
-      documentCount: mentorData.mentorDocuments?.length || 0,
-      documentsMetadataCount: mentorData.documents?.length || 0,
-      educationCount: mentorData.education?.length || 0
-    })
+    console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND')
 
     const res = await axiosInstance.post('/api/mentors/apply', formData)
     
-    console.log('Mentor application response:', res.data)
+    console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND')
     return ok(res.data, res.data?.message || 'Mentor application submitted successfully')
   } catch (error) {
     console.error('Mentor application error:', {
@@ -290,7 +283,7 @@ export async function registerMentor(mentorData) {
         } 
         // Industry and position are now IDs from dropdowns
         else if (frontendKey === 'industry' || frontendKey === 'position') {
-          console.log(`📤 [registerMentor] Sending ${backendKey}:`, value);
+          console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND');
           formData.append(backendKey, value) // Send as-is (it's already an ID)
         } else {
           formData.append(backendKey, value)
@@ -308,19 +301,11 @@ export async function registerMentor(mentorData) {
       formData.append('education', JSON.stringify(mentorData.education))
     }
 
-    console.log('Registering mentor with FormData:', {
-      email: mentorData.email,
-      firstName: mentorData.firstName,
-      lastName: mentorData.lastName,
-      hasProfileImage: mentorData.profilePicture instanceof File,
-      documentCount: mentorData.mentorDocuments?.length || 0,
-      documentsMetadataCount: mentorData.documents?.length || 0,
-      educationCount: mentorData.education?.length || 0
-    })
+    console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND')
 
     const res = await axiosInstance.post('/api/mentors/register', formData)
     
-    console.log('Mentor registration response:', res.data)
+    console.log('CAREERSYNC PLATFORM CREATED BY 4BE AT ABOVE AND BEYOND')
     return ok(res.data, res.data?.message || 'Mentor registration successful')
   } catch (error) {
     console.error('Mentor registration error:', {
