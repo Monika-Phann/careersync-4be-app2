@@ -477,10 +477,11 @@ exports.getMyEarnings = async (mentorId) => {
   });
 
   // Calculate earnings from completed bookings - return full earnings without commission
+  // Total earning: fetch from dashboard total revenue (sum of all completed bookings)
   const completedBookings = bookings.filter(b => b.status === "completed");
   const totalRevenue = completedBookings.reduce((sum, b) => sum + parseFloat(b.total_amount || 0), 0);
   const platformCommission = totalRevenue * COMMISSION_RATE;
-  // Return full earnings (totalRevenue) instead of after commission
+  // Return full earnings (totalRevenue) - this matches dashboard total revenue for completed bookings
   const mentorEarnings = totalRevenue;
 
   // Get last month's earnings - return full earnings without commission
@@ -495,26 +496,25 @@ exports.getMyEarnings = async (mentorId) => {
   // Return full earnings (lastMonthRevenue) instead of after commission
   const lastMonthEarnings = lastMonthRevenue;
 
-  // Get today's earnings - return full earnings without commission
-  // Use certificate issue_date (when booking was completed) or updated_at (when status changed to completed)
+  // Get today's earnings - only count bookings that:
+  // 1. Were completed today (based on certificate issue_date)
+  // 2. AND have a certificate (meaning student received a certificate)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
   
   const todayBookings = completedBookings.filter(b => {
-    // Use certificate issue_date if available (most accurate - when certificate was issued/completion date)
-    // Otherwise use updated_at (when booking status was changed to completed)
-    // Fallback to created_at only if neither is available
-    let completionDate;
-    if (b.Certificate && b.Certificate.issue_date) {
-      completionDate = new Date(b.Certificate.issue_date);
-    } else if (b.updated_at) {
-      completionDate = new Date(b.updated_at);
-    } else {
-      completionDate = new Date(b.created_at);
+    // Only count bookings that have a certificate (student received certificate)
+    if (!b.Certificate || !b.Certificate.issue_date) {
+      return false;
     }
+    
+    // Use certificate issue_date (when certificate was issued = completion date)
+    const completionDate = new Date(b.Certificate.issue_date);
     completionDate.setHours(0, 0, 0, 0);
+    
+    // Check if certificate was issued today
     return completionDate >= today && completionDate < tomorrow;
   });
   const todayRevenue = todayBookings.reduce((sum, b) => sum + parseFloat(b.total_amount || 0), 0);

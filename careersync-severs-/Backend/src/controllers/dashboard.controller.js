@@ -78,10 +78,11 @@ exports.getDashboardSummary = async (req, res) => {
       }
     });
 
-    // Get total revenue (all time)
+    // Get total revenue (all time) - only from completed bookings (matches earnings calculation)
     const totalRevenue = await Booking.sum('total_amount', {
       where: {
-        mentor_id: mentorId
+        mentor_id: mentorId,
+        status: 'completed'
       }
     }) || 0;
 
