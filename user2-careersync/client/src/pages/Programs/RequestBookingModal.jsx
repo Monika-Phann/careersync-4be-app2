@@ -49,14 +49,14 @@ export default function RequestBookingModal({ open, onClose, mentor }) {
         position_id: selectedSlot.position_id,
       };
 
-      console.log("Submitting booking to backend:", payload);
-      console.log("Using token:", token ? "✅ Token present" : "❌ No token");
-      console.log("API URL:", axiosInstance.defaults.baseURL);
+      console.log("CAREERSYNC PLATFORM CREATING BY 4BE AT ABOVE AND BEYONG SCHOOL");
+      console.log("CAREERSYNC PLATFORM CREATING BY 4BE AT ABOVE AND BEYONG SCHOOL");
+      console.log("CAREERSYNC PLATFORM CREATING BY 4BE AT ABOVE AND BEYONG SCHOOL");
 
       // Call the booking API
       const response = await axiosInstance.post('/api/bookings', payload);
 
-      console.log("Booking response:", response.data);
+      console.log("CAREERSYNC PLATFORM CREATING BY 4BE AT ABOVE AND BEYONG SCHOOL");
 
       setLoading(false);
       setSubmitted(true);

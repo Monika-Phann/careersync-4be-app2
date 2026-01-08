@@ -54,10 +54,23 @@ exports.createBooking = async (userId, data) => {
     status: "pending"
   });
 
-  // 5️⃣ Lock slot
-  slot.is_booked = true;
-  slot.booking_id = booking.id;
-  await slot.save();
+  // 5️⃣ Delete timeslot automatically when booked (instead of just marking as booked)
+  // Note: This requires the database foreign key constraint to be updated to allow deletion
+  // The constraint "Booking_schedule_timeslot_id_fkey" needs ON DELETE SET NULL or CASCADE
+  // For now, we attempt deletion and handle errors gracefully
+  try {
+    await slot.destroy();
+    console.log(`✅ Timeslot ${slot.id} deleted automatically after booking`);
+  } catch (err) {
+    // If deletion fails due to foreign key constraint, mark as booked as fallback
+    // TODO: Update database constraint: ALTER TABLE "Booking" DROP CONSTRAINT "Booking_schedule_timeslot_id_fkey";
+    //       ALTER TABLE "Booking" ADD CONSTRAINT "Booking_schedule_timeslot_id_fkey" 
+    //       FOREIGN KEY (schedule_timeslot_id) REFERENCES "Schedule_Timeslot"(id) ON DELETE SET NULL;
+    console.warn(`⚠️ Could not delete timeslot ${slot.id} due to foreign key constraint. Marking as booked instead.`, err.message);
+    console.warn(`⚠️ To enable automatic deletion, update the database constraint to allow ON DELETE SET NULL`);
+    slot.is_booked = true;
+    await slot.save();
+  }
 
   // 6️⃣ Create/Update Invoice with booking details
   // Check if invoice already exists for this booking

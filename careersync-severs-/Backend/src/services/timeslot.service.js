@@ -85,10 +85,19 @@ exports.deleteTimeslot = async (mentorUserId, timeslotId) => {
   const mentor = await Mentor.findOne({ where: { user_id: mentorUserId } });
   if (!mentor) throw new Error("Mentor not found");
 
+  const { Booking } = require("../models");
+
+  // Check if timeslot exists and belongs to mentor
   const timeslot = await ScheduleTimeslot.findOne({
-    where: { id: timeslotId, mentor_id: mentor.id, booking_id: null }
+    where: { id: timeslotId, mentor_id: mentor.id }
   });
-  if (!timeslot) throw new Error("Timeslot not found, not yours, or already booked");
+  if (!timeslot) throw new Error("Timeslot not found or not yours");
+
+  // Check if timeslot has an associated booking
+  const booking = await Booking.findOne({
+    where: { schedule_timeslot_id: timeslotId }
+  });
+  if (booking) throw new Error("Cannot delete timeslot that is already booked");
 
   await timeslot.destroy();
 };
@@ -101,7 +110,8 @@ exports.getAllMentorTimeslots = async (mentorUserId) => {
 
   const { Booking, AccUser, User } = require("../models");
 
-  return await ScheduleTimeslot.findAll({
+  // Get all timeslots for mentor
+  const timeslots = await ScheduleTimeslot.findAll({
     where: { 
       mentor_id: mentor.id
     },
@@ -126,5 +136,13 @@ exports.getAllMentorTimeslots = async (mentorUserId) => {
       }
     ],
     order: [["start_time", "ASC"]]
+  });
+
+  // Filter out timeslots that have bookings (they should be deleted automatically when booked,
+  // but this handles any edge cases or existing data)
+  return timeslots.filter(timeslot => {
+    // If timeslot has a booking, it should have been deleted, but filter it out just in case
+    const hasBooking = timeslot.Booking && timeslot.Booking.id;
+    return !hasBooking;
   });
 };

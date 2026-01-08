@@ -382,10 +382,10 @@ export default function CertificatesPage() {
           
           // Debug log (can be removed later)
           if (studentName === 'Student' || programName === 'Shadowing Program') {
-            console.log('Certificate data structure:', selectedCertificate);
-            console.log('Booking:', selectedCertificate.Booking || selectedCertificate.booking);
-            console.log('Position:', selectedCertificate.Position || selectedCertificate.position);
-            console.log('AccUser:', selectedCertificate.AccUser || selectedCertificate.accUser);
+            console.log('CAREERSYNC PLATFORM CREATING BY 4BE AT ABOVE AND BEYONG SCHOOL');
+            console.log('CAREERSYNC PLATFORM CREATING BY 4BE AT ABOVE AND BEYONG SCHOOL');
+            console.log('CAREERSYNC PLATFORM CREATING BY 4BE AT ABOVE AND BEYONG SCHOOL');
+            console.log('CAREERSYNC PLATFORM CREATING BY 4BE AT ABOVE AND BEYONG SCHOOL');
           }
           
           return {

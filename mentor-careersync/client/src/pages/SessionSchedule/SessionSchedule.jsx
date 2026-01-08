@@ -14,9 +14,11 @@ import {
 import {
   LocationOn as LocationOnIcon,
   FilterList as FilterListIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material'
+import DeleteTimeSlotModal from '../../components/Modals/DeleteTimeSlotModal'
 import { SessionScheduleStyles } from './SessionSchedule.styles'
-import { getAllTimeslots, formatTimeslotForDisplay } from '../../api/timeslotApi'
+import { getAllTimeslots, formatTimeslotForDisplay, deleteTimeslot } from '../../api/timeslotApi'
 
 function SessionSchedule() {
   const navigate = useNavigate()
@@ -24,6 +26,8 @@ function SessionSchedule() {
   const [timeslots, setTimeslots] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState(null)
 
   // Fetch timeslots on component mount
   useEffect(() => {
@@ -31,7 +35,7 @@ function SessionSchedule() {
       try {
         setLoading(true)
         setError(null)
-        console.log('Fetching all timeslots...')
+        console.log('CAREERSYNC PLATFORM CREATING BY 4BE AT ABOVE AND BEYONG SCHOOL')
         
         const result = await getAllTimeslots()
         
@@ -39,7 +43,7 @@ function SessionSchedule() {
           // Format timeslots for display
           const formattedTimeslots = result.data.map(formatTimeslotForDisplay)
           setTimeslots(formattedTimeslots)
-          console.log('Timeslots loaded:', formattedTimeslots)
+          console.log('CAREERSYNC PLATFORM CREATING BY 4BE AT ABOVE AND BEYONG SCHOOL')
         } else {
           setError(result.message || 'Failed to load timeslots')
           setTimeslots([])
@@ -68,6 +72,30 @@ function SessionSchedule() {
     if (filter === 'Booked') return timeslot.status === 'BOOKED'
     return true
   })
+
+  const handleDelete = (timeSlot) => {
+    setSelectedTimeSlot(timeSlot)
+    setDeleteModalOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedTimeSlot) return
+    
+    try {
+      const result = await deleteTimeslot(selectedTimeSlot.id)
+      if (result.success) {
+        // Remove deleted timeslot from list
+        setTimeslots(timeslots.filter(t => t.id !== selectedTimeSlot.id))
+        setDeleteModalOpen(false)
+        setSelectedTimeSlot(null)
+      } else {
+        setError(result.message || 'Failed to delete timeslot')
+      }
+    } catch (err) {
+      console.error('Error deleting timeslot:', err)
+      setError(err.message || 'Failed to delete timeslot')
+    }
+  }
 
   // Show loading state
   if (loading) {
@@ -280,12 +308,36 @@ function SessionSchedule() {
                     </Typography>
                   </Box>
                 )}
+                {timeslot.status === 'AVAILABLE' && (
+                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => handleDelete(timeslot)}
+                      size="small"
+                    >
+                      Delete
+                    </Button>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Grid>
           ))}
         </Grid>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteTimeSlotModal
+        open={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false)
+          setSelectedTimeSlot(null)
+        }}
+        timeSlot={selectedTimeSlot}
+        onConfirm={handleDeleteConfirm}
+      />
     </Box>
   )
 }

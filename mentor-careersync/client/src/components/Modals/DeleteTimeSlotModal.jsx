@@ -18,11 +18,14 @@ import {
 } from '@mui/icons-material'
 import { DeleteTimeSlotModalStyles } from './DeleteTimeSlotModal.styles'
 
-function DeleteTimeSlotModal({ open, onClose, timeSlot }) {
+function DeleteTimeSlotModal({ open, onClose, timeSlot, onConfirm }) {
   const handleDelete = () => {
-    console.log('Deleting time slot:', timeSlot)
-    onClose()
-    // Handle delete logic here
+    if (onConfirm) {
+      onConfirm()
+    } else {
+      console.log('CAREERSYNC PLATFORM CREATING BY 4BE AT ABOVE AND BEYONG SCHOOL')
+      onClose()
+    }
   }
 
   return (

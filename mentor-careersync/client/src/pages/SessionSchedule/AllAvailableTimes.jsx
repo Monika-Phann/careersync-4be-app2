@@ -43,7 +43,7 @@ function AllAvailableTimes() {
     try {
       setLoading(true)
       setError(null)
-      console.log('Fetching all timeslots...')
+      console.log('CAREERSYNC PLATFORM CREATING BY 4BE AT ABOVE AND BEYONG SCHOOL')
       
       const result = await getAllTimeslots()
       
@@ -53,7 +53,7 @@ function AllAvailableTimes() {
         // Sort by selected criteria
         const sortedTimeslots = sortTimeslots(formattedTimeslots, sortBy)
         setTimeslots(sortedTimeslots)
-        console.log('Timeslots loaded:', sortedTimeslots)
+        console.log('CAREERSYNC PLATFORM CREATING BY 4BE AT ABOVE AND BEYONG SCHOOL')
       } else {
         setError(result.message || 'Failed to load timeslots')
         setTimeslots([])

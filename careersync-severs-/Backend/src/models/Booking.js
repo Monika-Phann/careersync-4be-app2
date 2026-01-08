@@ -7,7 +7,8 @@ module.exports = (sequelize) => {
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     
     // Foreign keys — ADDED (critical for ERD compatibility)
-    schedule_timeslot_id: { type: DataTypes.UUID, allowNull: false, unique: true },
+    // Note: schedule_timeslot_id can be null after timeslot is deleted (booking keeps snapshot data)
+    schedule_timeslot_id: { type: DataTypes.UUID, allowNull: true, unique: true },
     mentor_id: { type: DataTypes.UUID, allowNull: false },
     acc_user_id: { type: DataTypes.UUID, allowNull: false },
     position_id: { type: DataTypes.UUID, allowNull: false },
