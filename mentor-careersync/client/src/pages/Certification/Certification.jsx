@@ -14,14 +14,12 @@ import {
 import {
   Search as SearchIcon,
   Download as DownloadIcon,
-  FilterList as FilterListIcon,
   CalendarToday as CalendarIcon,
   CheckCircle as CheckCircleIcon,
   Visibility as VisibilityIcon,
   Share as ShareIcon,
   Person as PersonIcon,
   AccountCircle as AccountCircleIcon,
-  ContentCopy as CopyIcon,
   AccessTime as AccessTimeIcon,
 } from "@mui/icons-material";
 import { CertificationStyles } from "./Certification.styles";
@@ -31,10 +29,12 @@ import CertificatePreview from "../../components/CertificatePreview/CertificateP
 
 function Certification() {
   const [certificates, setCertificates] = useState([]);
+  const [filteredCertificates, setFilteredCertificates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCertificate, setSelectedCertificate] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchCertificates = async () => {
@@ -117,6 +117,7 @@ function Certification() {
         });
         
         setCertificates(formattedCertificates);
+        setFilteredCertificates(formattedCertificates);
       } catch (err) {
         console.error('Error fetching certificates:', err);
         setError(err.response?.data?.message || err.message || 'Failed to load certificates');
@@ -127,6 +128,27 @@ function Certification() {
 
     fetchCertificates();
   }, []);
+
+  // Filter certificates based on search (student name)
+  useEffect(() => {
+    let filtered = [...certificates];
+
+    // Apply search filter - primarily search by student name
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(cert => {
+        // Primary search: student name (first name, last name, or full name)
+        const studentName = cert.studentName.toLowerCase();
+        const nameParts = studentName.split(' ');
+        
+        // Check if query matches full name or any part of the name
+        return studentName.includes(query) || 
+               nameParts.some(part => part.includes(query));
+      });
+    }
+
+    setFilteredCertificates(filtered);
+  }, [certificates, searchQuery]);
 
   // Format date for certificate display
   const formatDate = (dateString) => {
@@ -176,20 +198,15 @@ function Certification() {
             <Typography variant="h6" sx={CertificationStyles.title}>
               All Certificates
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<DownloadIcon />}
-              sx={CertificationStyles.downloadAllButton}
-            >
-              Download All
-            </Button>
           </Box>
 
           <Box sx={CertificationStyles.toolbar}>
             <TextField
-              placeholder="Search users..."
+              placeholder="Search by student name..."
               size="small"
               sx={CertificationStyles.searchField}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -198,29 +215,15 @@ function Certification() {
                 ),
               }}
             />
-            <Box sx={CertificationStyles.headerActions}>
-              <Button
-                variant="outlined"
-                startIcon={<FilterListIcon />}
-                sx={CertificationStyles.actionButton}
-              >
-                Export
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<CalendarIcon />}
-                sx={CertificationStyles.actionButton}
-              >
-                Date Range
-              </Button>
-            </Box>
           </Box>
         </CardContent>
       </Card>
 
       <Box sx={CertificationStyles.stats}>
         <Typography variant="body1" sx={CertificationStyles.statsText}>
-          Total {certificates.length} certificate{certificates.length !== 1 ? 's' : ''}
+          {filteredCertificates.length === certificates.length
+            ? `Total ${certificates.length} certificate${certificates.length !== 1 ? 's' : ''}`
+            : `Showing ${filteredCertificates.length} of ${certificates.length} certificate${certificates.length !== 1 ? 's' : ''}`}
         </Typography>
         <Box sx={CertificationStyles.activityContainer}>
           <AccessTimeIcon sx={CertificationStyles.activityIcon} />
@@ -240,16 +243,22 @@ function Certification() {
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
           <CircularProgress />
         </Box>
-      ) : certificates.length === 0 ? (
+      ) : filteredCertificates.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8, color: 'text.secondary' }}>
-          <Typography variant="body1">No certificates issued yet</Typography>
+          <Typography variant="body1">
+            {certificates.length === 0
+              ? 'No certificates issued yet'
+              : 'No certificates match your filters'}
+          </Typography>
           <Typography variant="body2" sx={{ mt: 1 }}>
-            Certificates will appear here when you complete bookings and mark them as completed.
+            {certificates.length === 0
+              ? 'Certificates will appear here when you complete bookings and mark them as completed.'
+              : 'Try adjusting your search query.'}
           </Typography>
         </Box>
       ) : (
         <Grid container spacing={3}>
-          {certificates.map((certificate) => (
+          {filteredCertificates.map((certificate) => (
           <Grid item xs={12} sm={6} key={certificate.id}>
             <Card sx={CertificationStyles.certificateCard}>
               <CardContent sx={CertificationStyles.cardContent}>

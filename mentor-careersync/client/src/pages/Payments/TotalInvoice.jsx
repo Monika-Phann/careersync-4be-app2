@@ -22,9 +22,6 @@ import {
 } from '@mui/material'
 import {
   Search as SearchIcon,
-  CalendarToday as CalendarIcon,
-  Download as DownloadIcon,
-  FilterList as FilterListIcon,
   MoreVert as MoreVertIcon,
 } from '@mui/icons-material'
 import BookingSummaryCards from '../../components/UI/BookingSummaryCards/BookingSummaryCards'
@@ -32,6 +29,7 @@ import InvoiceDetailsModal from '../../components/Modals/InvoiceDetailsModal'
 import { TotalInvoiceStyles } from './TotalInvoice.styles'
 import { getMyInvoices } from '../../services/bookingApi'
 import { CircularProgress, Alert } from '@mui/material'
+import jsPDF from 'jspdf'
 
 const statusColors = {
   Paid: { color: '#008236', bgColor: '#E8F5E9', border: '#C8E6C9' },
@@ -86,6 +84,22 @@ function TotalInvoice() {
           // All invoices show as Paid status
           let status = 'Paid'
           
+          // Format dates for program details
+          const startDate = invoice.start_date_snapshot
+            ? new Date(invoice.start_date_snapshot).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+            : 'N/A'
+          const endDate = invoice.end_date_snapshot
+            ? new Date(invoice.end_date_snapshot).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+            : 'N/A'
+          const bookingDate = invoice.created_at
+            ? new Date(invoice.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+            : 'N/A'
+          
+          // Get student ID
+          const studentId = student?.id 
+            ? `U${student.id.substring(0, 4).toUpperCase()}`
+            : 'U0000'
+          
           return {
             id: invoice.id,
             invoiceId: `INV-${invoice.id.substring(0, 6).toUpperCase()}`,
@@ -96,12 +110,19 @@ function TotalInvoice() {
               email: student?.User?.email || '',
               initials: student 
                 ? `${student.first_name?.[0] || ''}${student.last_name?.[0] || ''}`.toUpperCase()
-                : (invoice.acc_user_name_snapshot || 'S').substring(0, 2).toUpperCase()
+                : (invoice.acc_user_name_snapshot || 'S').substring(0, 2).toUpperCase(),
+              id: studentId
             },
             bookingId: bookingId,
             dateTime: `${dateStr}, ${timeStr}`,
             amount: parseFloat(invoice.total_amount || 0),
             status: status,
+            // Program details from invoice snapshots
+            programName: invoice.mentor_position_snapshot || 'Shadowing Program',
+            mentorName: invoice.mentor_name_snapshot || 'Mentor',
+            startDate: startDate,
+            endDate: endDate,
+            bookingDate: bookingDate,
             rawInvoice: invoice
           }
         })
@@ -153,6 +174,139 @@ function TotalInvoice() {
     handleMenuClose()
   }
 
+  // Helper function to format amount
+  const formatAmount = (amount) => {
+    const numAmount = typeof amount === 'number' ? amount : (parseFloat(amount) || 0)
+    return numAmount.toFixed(2)
+  }
+
+  // Generate and download invoice PDF
+  const handleDownloadInvoice = (invoice) => {
+    if (!invoice) return
+
+    // Use dynamic import to ensure autoTable is properly loaded
+    import('jspdf-autotable').then(({ default: autoTable }) => {
+      try {
+        const programName = invoice.programName || invoice.rawInvoice?.mentor_position_snapshot || 'Shadowing Program'
+        const mentorName = invoice.mentorName || invoice.rawInvoice?.mentor_name_snapshot || 'Mentor'
+        const startDate = invoice.startDate || 'N/A'
+        const endDate = invoice.endDate || 'N/A'
+        const bookingDate = invoice.bookingDate || 'N/A'
+        const studentId = invoice.user?.id || 'U0000'
+        const studentName = invoice.user?.name || 'Student'
+
+        const doc = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        })
+        
+        // Invoice Header
+        doc.setFontSize(20)
+        doc.text("INVOICE", 105, 20, { align: "center" })
+        
+        // Invoice Details
+        doc.setFontSize(10)
+        doc.text(`Invoice ID: ${invoice.invoiceId}`, 20, 35)
+        doc.text(`Booking Number: ${invoice.bookingId}`, 20, 42)
+        doc.text(`Booking Date: ${bookingDate}`, 20, 49)
+        
+        // Student Information
+        doc.setFontSize(12)
+        doc.setFont(undefined, "bold")
+        doc.text("Student Information", 20, 60)
+        doc.setFont(undefined, "normal")
+        doc.setFontSize(10)
+        doc.text(`Student Name: ${studentName}`, 20, 68)
+        doc.text(`Student ID: ${studentId}`, 20, 75)
+        
+        // Program Details
+        doc.setFontSize(12)
+        doc.setFont(undefined, "bold")
+        doc.text("Program Details", 20, 85)
+        doc.setFont(undefined, "normal")
+        doc.setFontSize(10)
+        
+        const programDetails = [
+          ["Program Name", programName],
+          ["Mentor Name", mentorName],
+          ["Start Date", startDate],
+          ["End Date", endDate],
+        ]
+        
+        // Use autoTable for program details
+        autoTable(doc, {
+          startY: 92,
+          head: [],
+          body: programDetails,
+          theme: "plain",
+          styles: { fontSize: 10 },
+          columnStyles: {
+            0: { fontStyle: "bold", cellWidth: 60 },
+            1: { cellWidth: "auto" },
+          },
+          margin: { left: 20, right: 20 },
+        })
+        
+        // Items Table
+        let finalY = doc.lastAutoTable.finalY + 10
+        doc.setFontSize(12)
+        doc.setFont(undefined, "bold")
+        doc.text("Items", 20, finalY)
+        
+        const itemsData = [
+          ["Description", "Qty", "Rate", "Amount"],
+          [programName, "1", `$${formatAmount(invoice.amount)}`, `$${formatAmount(invoice.amount)}`],
+        ]
+        
+        autoTable(doc, {
+          startY: finalY + 5,
+          head: [itemsData[0]],
+          body: [itemsData[1]],
+          theme: "striped",
+          headStyles: { fillColor: [61, 61, 61], textColor: 255, fontStyle: "bold" },
+          styles: { fontSize: 10 },
+          columnStyles: {
+            0: { cellWidth: 90 },
+            1: { cellWidth: 30, halign: "center" },
+            2: { cellWidth: 30, halign: "right" },
+            3: { cellWidth: 30, halign: "right" },
+          },
+          margin: { left: 20, right: 20 },
+        })
+        
+        // Summary
+        finalY = doc.lastAutoTable.finalY + 10
+        doc.setFontSize(10)
+        doc.setFont(undefined, "normal")
+        doc.text(`Subtotal: $${formatAmount(invoice.amount)}`, 140, finalY, { align: "right" })
+        finalY += 10
+        doc.setFont(undefined, "bold")
+        doc.setFontSize(12)
+        doc.text(`Total Amount: $${formatAmount(invoice.amount)}`, 140, finalY, { align: "right" })
+        
+        // Footer
+        finalY = finalY + 20
+        doc.setFontSize(8)
+        doc.setFont(undefined, "normal")
+        doc.text("Thank you for your business!", 105, finalY, { align: "center" })
+        
+        // Save the PDF
+        const fileName = `Invoice-${invoice.invoiceId.replace(/\s/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`
+        doc.save(fileName)
+        handleMenuClose()
+      } catch (error) {
+        console.error("Error generating PDF:", error)
+        alert("Failed to generate invoice. Please try again.")
+        handleMenuClose()
+      }
+    }).catch((error) => {
+      console.error("Error loading jspdf-autotable:", error)
+      alert("Failed to load PDF library. Please try again.")
+      handleMenuClose()
+    })
+  }
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -179,13 +333,6 @@ function TotalInvoice() {
             <Typography variant="h6" sx={TotalInvoiceStyles.title}>
               All Invoices
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<DownloadIcon />}
-              sx={TotalInvoiceStyles.downloadAllButton}
-            >
-              Download All
-            </Button>
           </Box>
 
           <Box sx={TotalInvoiceStyles.toolbar}>
@@ -203,22 +350,6 @@ function TotalInvoice() {
                 ),
               }}
             />
-            <Box sx={TotalInvoiceStyles.filters}>
-              <Button
-                variant="outlined"
-                startIcon={<FilterListIcon />}
-                sx={TotalInvoiceStyles.filterButton}
-              >
-                Status: All
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<CalendarIcon />}
-                sx={TotalInvoiceStyles.filterButton}
-              >
-                Date Range
-              </Button>
-            </Box>
           </Box>
 
           <TableContainer sx={{ overflowX: 'auto' }}>
@@ -355,7 +486,7 @@ function TotalInvoice() {
         }}
       >
         <MenuItem onClick={() => handleView(selectedInvoice)}>View Details</MenuItem>
-        <MenuItem onClick={handleMenuClose}>Download PDF</MenuItem>
+        <MenuItem onClick={() => handleDownloadInvoice(selectedInvoice)}>Download PDF</MenuItem>
         <MenuItem onClick={handleMenuClose}>Send Email</MenuItem>
       </Menu>
 

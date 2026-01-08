@@ -27,7 +27,7 @@ function AppContent() {
         sx={{
           flex: 1,
           marginTop: '72px',
-          paddingBottom: '40px',
+          paddingBottom: location.pathname === '/' ? '0' : '40px',
           width: '100%',
           '@media (max-width: 900px)': {
             marginTop: '64px',
