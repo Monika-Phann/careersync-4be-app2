@@ -47,6 +47,18 @@ const pageTitles = {
     title: "User Management",
     subtitle: "Manage and track student",
   },
+  "/certification": {
+    title: "Certification",
+    subtitle: "View and manage certificates",
+  },
+  "/earnings": {
+    title: "Earning Summary",
+    subtitle: "View your earnings and payment history",
+  },
+  "/invoices": {
+    title: "Total Invoice",
+    subtitle: "View and manage all your invoices",
+  },
   "/settings": {
     title: "Settings",
     subtitle: "Account Information & Security",
