@@ -149,10 +149,10 @@ const sendResetPasswordEmail = async (email, token) => {
 
 // Send mentor approval email
 const sendMentorApprovalEmail = async (toEmail, firstName) => {
-  // Default to Mentor App in Production
-  const loginUrl = process.env.CLIENT_BASE_URL_MENTOR 
-    ? `${process.env.CLIENT_BASE_URL_MENTOR}/login` 
-    : 'https://mentor-4be.ptascloud.online/login';
+  // Use student login page URL
+  const loginUrl = process.env.CLIENT_BASE_URL 
+    ? `${process.env.CLIENT_BASE_URL}/signin` 
+    : 'https://careersync-4be.ptascloud.online/signin';
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">

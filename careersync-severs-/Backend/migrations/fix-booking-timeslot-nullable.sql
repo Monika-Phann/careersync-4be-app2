@@ -24,3 +24,4 @@ ON DELETE SET NULL;
 -- 2. When a timeslot is deleted, the booking's schedule_timeslot_id will be set to NULL automatically
 -- 3. All booking snapshot data is preserved
 
+
