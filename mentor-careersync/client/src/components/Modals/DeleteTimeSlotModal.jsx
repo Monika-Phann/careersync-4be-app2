@@ -18,7 +18,7 @@ import {
 } from '@mui/icons-material'
 import { DeleteTimeSlotModalStyles } from './DeleteTimeSlotModal.styles'
 
-function DeleteTimeSlotModal({ open, onClose, timeSlot, onConfirm }) {
+function DeleteTimeSlotModal({ open, onClose, timeSlot, onConfirm, error }) {
   const handleDelete = () => {
     if (onConfirm) {
       onConfirm()
@@ -80,6 +80,14 @@ function DeleteTimeSlotModal({ open, onClose, timeSlot, onConfirm }) {
         >
           Warning: Once deleted, this time slot will be permanently removed and cannot be recovered.
         </Alert>
+        {error && (
+          <Alert
+            severity="error"
+            sx={{ mt: 2 }}
+          >
+            {error}
+          </Alert>
+        )}
       </DialogContent>
 
       <DialogActions sx={DeleteTimeSlotModalStyles.dialogActions}>

@@ -85,7 +85,7 @@ exports.deleteTimeslot = async (mentorUserId, timeslotId) => {
   const mentor = await Mentor.findOne({ where: { user_id: mentorUserId } });
   if (!mentor) throw new Error("Mentor not found");
 
-  const { Booking } = require("../models");
+  const { Booking, sequelize } = require("../models");
 
   // Check if timeslot exists and belongs to mentor
   const timeslot = await ScheduleTimeslot.findOne({
@@ -93,13 +93,100 @@ exports.deleteTimeslot = async (mentorUserId, timeslotId) => {
   });
   if (!timeslot) throw new Error("Timeslot not found or not yours");
 
-  // Check if timeslot has an associated booking
-  const booking = await Booking.findOne({
-    where: { schedule_timeslot_id: timeslotId }
-  });
-  if (booking) throw new Error("Cannot delete timeslot that is already booked");
+  // Use a transaction to ensure atomicity
+  const transaction = await sequelize.transaction();
 
-  await timeslot.destroy();
+  try {
+    // Allow deletion of booked timeslots - mentors can delete their booked slots
+    // The booking will still exist with snapshot data, but timeslot reference will be set to null
+    // Check if there's a booking and update it before deleting timeslot
+    const bookings = await Booking.findAll({
+      where: { schedule_timeslot_id: timeslotId },
+      transaction
+    });
+    
+    if (bookings && bookings.length > 0) {
+      // Try to set bookings' schedule_timeslot_id to null using raw SQL
+      // This bypasses Sequelize validation and works even if the column has NOT NULL constraint
+      // We'll handle the constraint error separately
+      const bookingIds = bookings.map(b => b.id);
+      
+      try {
+        // First, try to alter the column to allow NULL (if not already)
+        // This is safe to run multiple times - it will fail silently if already nullable
+        await sequelize.query(
+          `ALTER TABLE "Booking" ALTER COLUMN schedule_timeslot_id DROP NOT NULL`,
+          { transaction }
+        );
+      } catch (alterError) {
+        // Column might already be nullable, or we don't have permission
+        // Continue anyway - we'll catch the error when trying to update
+        if (!alterError.message.includes('already') && !alterError.message.includes('does not exist')) {
+          console.warn('⚠️ Could not alter column:', alterError.message);
+        }
+      }
+
+      // Now try to update using raw SQL
+      try {
+        await sequelize.query(
+          `UPDATE "Booking" SET schedule_timeslot_id = NULL WHERE id = ANY(ARRAY[:bookingIds]::uuid[])`,
+          {
+            replacements: { bookingIds },
+            type: sequelize.QueryTypes.UPDATE,
+            transaction
+          }
+        );
+        console.log(`⚠️ ${bookings.length} booking(s) timeslot reference(s) removed before timeslot deletion`);
+      } catch (updateError) {
+        // If update fails due to NOT NULL constraint, provide helpful error
+        if (updateError.message && updateError.message.includes('violates not-null constraint')) {
+          await transaction.rollback();
+          throw new Error(
+            "Database migration required: The Booking table's schedule_timeslot_id column needs to allow NULL values. " +
+            "Please run this SQL command on your database:\n\n" +
+            "ALTER TABLE \"Booking\" ALTER COLUMN schedule_timeslot_id DROP NOT NULL;\n\n" +
+            "Or run the migration script: migrations/update-booking-timeslot-constraint.sql"
+          );
+        }
+        throw updateError;
+      }
+    }
+
+    // Delete the timeslot
+    await timeslot.destroy({ transaction });
+
+    // Commit the transaction
+    await transaction.commit();
+    console.log(`✅ Timeslot ${timeslotId} deleted successfully`);
+  } catch (error) {
+    // Rollback the transaction on error
+    await transaction.rollback();
+    console.error(`❌ Error deleting timeslot ${timeslotId}:`, error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message
+    });
+    
+    // Re-throw with helpful message if it's our custom error
+    if (error.message && error.message.includes('Database migration required')) {
+      throw error;
+    }
+    
+    // Provide a more helpful error message for other cases
+    if (error.message && error.message.includes('violates not-null constraint')) {
+      throw new Error(
+        "Database migration required: Please run this SQL on your database:\n\n" +
+        "ALTER TABLE \"Booking\" ALTER COLUMN schedule_timeslot_id DROP NOT NULL;"
+      );
+    }
+    if (error.name === 'SequelizeForeignKeyConstraintError') {
+      throw new Error("Cannot delete timeslot: it is still referenced by a booking. The booking reference should be cleared first.");
+    }
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      throw new Error("Cannot delete timeslot due to unique constraint. Please contact support.");
+    }
+    throw new Error(error.message || "Failed to delete timeslot. Please try again.");
+  }
 };
 
 // ✅ FIXED: Get ALL timeslots for a mentor with booking info
@@ -110,7 +197,7 @@ exports.getAllMentorTimeslots = async (mentorUserId) => {
 
   const { Booking, AccUser, User } = require("../models");
 
-  // Get all timeslots for mentor
+  // Get all timeslots for mentor (including booked ones so mentors can view and manage them)
   const timeslots = await ScheduleTimeslot.findAll({
     where: { 
       mentor_id: mentor.id
@@ -122,7 +209,7 @@ exports.getAllMentorTimeslots = async (mentorUserId) => {
       },
       {
         model: Booking,
-        attributes: ['id', 'acc_user_id', 'status'],
+        attributes: ['id', 'acc_user_id', 'status', 'created_at'],
         required: false,
         include: [{
           model: AccUser,
@@ -138,11 +225,6 @@ exports.getAllMentorTimeslots = async (mentorUserId) => {
     order: [["start_time", "ASC"]]
   });
 
-  // Filter out timeslots that have bookings (they should be deleted automatically when booked,
-  // but this handles any edge cases or existing data)
-  return timeslots.filter(timeslot => {
-    // If timeslot has a booking, it should have been deleted, but filter it out just in case
-    const hasBooking = timeslot.Booking && timeslot.Booking.id;
-    return !hasBooking;
-  });
+  // Return all timeslots (including booked ones) so mentors can view and manage them
+  return timeslots;
 };

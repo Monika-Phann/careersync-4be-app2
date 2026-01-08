@@ -119,6 +119,7 @@ function AllAvailableTimes() {
     if (!selectedTimeSlot) return
     
     try {
+      setError(null) // Clear any previous errors
       const result = await deleteTimeslot(selectedTimeSlot.id)
       if (result.success) {
         // Remove deleted timeslot from list
@@ -126,11 +127,16 @@ function AllAvailableTimes() {
         setDeleteModalOpen(false)
         setSelectedTimeSlot(null)
       } else {
-        setError(result.message || 'Failed to delete timeslot')
+        const errorMsg = result.message || 'Failed to delete timeslot'
+        setError(errorMsg)
+        console.error('Delete timeslot error:', errorMsg)
+        // Keep modal open so user can see the error
       }
     } catch (err) {
       console.error('Error deleting timeslot:', err)
-      setError(err.message || 'Failed to delete timeslot')
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to delete timeslot. Please try again.'
+      setError(errorMsg)
+      // Keep modal open so user can see the error
     }
   }
 
@@ -290,7 +296,6 @@ function AllAvailableTimes() {
                         }
                         onClick={() => handleDelete(timeSlot)}
                         sx={AllAvailableTimesStyles.deleteButton}
-                        disabled={timeSlot.status === 'BOOKED'}
                       >
                         Delete
                       </Button>
@@ -325,9 +330,11 @@ function AllAvailableTimes() {
         onClose={() => {
           setDeleteModalOpen(false)
           setSelectedTimeSlot(null)
+          setError(null) // Clear error when closing modal
         }}
         timeSlot={selectedTimeSlot}
         onConfirm={handleDeleteConfirm}
+        error={error}
       />
     </Box>
   )
