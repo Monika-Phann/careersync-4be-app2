@@ -471,13 +471,14 @@ exports.getMyEarnings = async (mentorId) => {
     order: [["created_at", "DESC"]]
   });
 
-  // Calculate earnings from completed bookings
+  // Calculate earnings from completed bookings - return full earnings without commission
   const completedBookings = bookings.filter(b => b.status === "completed");
   const totalRevenue = completedBookings.reduce((sum, b) => sum + parseFloat(b.total_amount || 0), 0);
   const platformCommission = totalRevenue * COMMISSION_RATE;
-  const mentorEarnings = totalRevenue - platformCommission;
+  // Return full earnings (totalRevenue) instead of after commission
+  const mentorEarnings = totalRevenue;
 
-  // Get last month's earnings
+  // Get last month's earnings - return full earnings without commission
   const lastMonth = new Date();
   lastMonth.setMonth(lastMonth.getMonth() - 1);
   const lastMonthBookings = completedBookings.filter(b => {
@@ -486,9 +487,10 @@ exports.getMyEarnings = async (mentorId) => {
   });
   const lastMonthRevenue = lastMonthBookings.reduce((sum, b) => sum + parseFloat(b.total_amount || 0), 0);
   const lastMonthCommission = lastMonthRevenue * COMMISSION_RATE;
-  const lastMonthEarnings = lastMonthRevenue - lastMonthCommission;
+  // Return full earnings (lastMonthRevenue) instead of after commission
+  const lastMonthEarnings = lastMonthRevenue;
 
-  // Get today's earnings
+  // Get today's earnings - return full earnings without commission
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayBookings = completedBookings.filter(b => {
@@ -497,7 +499,8 @@ exports.getMyEarnings = async (mentorId) => {
   });
   const todayRevenue = todayBookings.reduce((sum, b) => sum + parseFloat(b.total_amount || 0), 0);
   const todayCommission = todayRevenue * COMMISSION_RATE;
-  const todayEarnings = todayRevenue - todayCommission;
+  // Return full earnings (todayRevenue) instead of after commission
+  const todayEarnings = todayRevenue;
 
   // Format recent payments (bookings with payments, ordered by most recent)
   const recentPayments = bookings
@@ -550,8 +553,8 @@ exports.getMyEarnings = async (mentorId) => {
     
     const dayEarnings = dayBookings.reduce((sum, b) => {
       const total = parseFloat(b.total_amount || 0);
-      const commission = total * COMMISSION_RATE;
-      return sum + (total - commission);
+      // Return full earnings without commission
+      return sum + total;
     }, 0);
     
     chartData.push({

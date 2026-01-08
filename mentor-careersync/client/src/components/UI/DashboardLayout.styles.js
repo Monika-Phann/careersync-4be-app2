@@ -13,6 +13,8 @@ export const DashboardLayoutStyles = {
     width: '100%',
     minHeight: '100vh',
     minWidth: 0,
+    position: 'relative',
+    zIndex: 1, // Ensure content stays below sidebar
   },
   content: {
     flexGrow: 1,

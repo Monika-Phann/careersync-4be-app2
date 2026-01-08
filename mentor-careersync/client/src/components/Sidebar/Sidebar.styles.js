@@ -16,6 +16,7 @@ export const SidebarStyles = {
     height: '100vh',
     top: 0,
     left: 0,
+    zIndex: 1200, // Ensure sidebar stays above content
     // subtle performance-friendly transition for mobile drawer
     transition: 'transform 200ms ease',
   },
