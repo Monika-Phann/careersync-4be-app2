@@ -452,7 +452,7 @@ exports.getMyEarnings = async (mentorId) => {
   const mentor = await Mentor.findOne({ where: { user_id: mentorId } });
   if (!mentor) throw new Error("Only mentors can view earnings");
 
-  // Get all bookings with payments and student info for recent payments
+  // Get all bookings with payments, certificates, and student info for recent payments
   const bookings = await Booking.findAll({
     where: { mentor_id: mentor.id },
     include: [
@@ -465,6 +465,11 @@ exports.getMyEarnings = async (mentorId) => {
         model: AccUser,
         as: "menteeUser",
         attributes: ["id", "first_name", "last_name", "profile_image"],
+        required: false
+      },
+      {
+        model: Certificate,
+        attributes: ["id", "issue_date"],
         required: false
       }
     ],
@@ -491,11 +496,26 @@ exports.getMyEarnings = async (mentorId) => {
   const lastMonthEarnings = lastMonthRevenue;
 
   // Get today's earnings - return full earnings without commission
+  // Use certificate issue_date (when booking was completed) or updated_at (when status changed to completed)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
   const todayBookings = completedBookings.filter(b => {
-    const bookingDate = new Date(b.created_at);
-    return bookingDate >= today;
+    // Use certificate issue_date if available (most accurate - when certificate was issued/completion date)
+    // Otherwise use updated_at (when booking status was changed to completed)
+    // Fallback to created_at only if neither is available
+    let completionDate;
+    if (b.Certificate && b.Certificate.issue_date) {
+      completionDate = new Date(b.Certificate.issue_date);
+    } else if (b.updated_at) {
+      completionDate = new Date(b.updated_at);
+    } else {
+      completionDate = new Date(b.created_at);
+    }
+    completionDate.setHours(0, 0, 0, 0);
+    return completionDate >= today && completionDate < tomorrow;
   });
   const todayRevenue = todayBookings.reduce((sum, b) => sum + parseFloat(b.total_amount || 0), 0);
   const todayCommission = todayRevenue * COMMISSION_RATE;
@@ -542,11 +562,20 @@ exports.getMyEarnings = async (mentorId) => {
     nextDate.setDate(nextDate.getDate() + 1);
     
     const dayBookings = completedBookings.filter(b => {
-      // Use start_date_snapshot (session date) for when earnings were actually earned
-      // Fallback to updated_at if start_date_snapshot is not available
-      const earningsDate = b.start_date_snapshot 
-        ? new Date(b.start_date_snapshot)
-        : new Date(b.updated_at || b.created_at);
+      // Use certificate issue_date (when booking was completed/certificate issued) for most accurate earnings date
+      // Fallback to updated_at (when status changed to completed) if certificate doesn't exist
+      // Fallback to start_date_snapshot (session date) if neither is available
+      // Last resort: use created_at
+      let earningsDate;
+      if (b.Certificate && b.Certificate.issue_date) {
+        earningsDate = new Date(b.Certificate.issue_date);
+      } else if (b.updated_at) {
+        earningsDate = new Date(b.updated_at);
+      } else if (b.start_date_snapshot) {
+        earningsDate = new Date(b.start_date_snapshot);
+      } else {
+        earningsDate = new Date(b.created_at);
+      }
       earningsDate.setHours(0, 0, 0, 0);
       return earningsDate >= date && earningsDate < nextDate;
     });
