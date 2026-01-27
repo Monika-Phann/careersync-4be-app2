@@ -1,0 +1,47 @@
+{
+  "name": "careersync-unified-backend",
+  "version": "2.0.0",
+  "description": "Unified CareerSync Backend - Mentor booking and admin management platform",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "careersync",
+    "mentor",
+    "booking",
+    "admin",
+    "education"
+  ],
+  "author": "CareerSync Team",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.962.0",
+    "@sendgrid/mail": "^8.1.6",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^2.2.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
+    "multer": "^2.0.2",
+    "multer-s3": "^3.0.1",
+    "nodemailer": "^7.0.12",
+    "pg": "^8.16.3",
+    "pg-hstore": "^2.3.4",
+    "prettier": "^3.7.4",
+    "sequelize": "^6.37.7",
+    "uuid": "^8.3.2",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}

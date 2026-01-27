@@ -1,0 +1,13 @@
+tunnel: b4b6440c-81f2-4886-b37d-d0acd490e1c9
+credentials-file: /home/ubuntu/.cloudflared/b4b6440c-81f2-4886-b37d-d0acd490e1c9.json
+
+ingress:
+  - hostname: careersync-4be.ptascloud.online
+    service: http://localhost:3000
+  - hostname: admin-4be.ptascloud.online
+    service: http://localhost:3002
+  - hostname: mentor-4be.ptascloud.online
+    service: http://localhost:3001
+  - hostname: api-4be.ptascloud.online
+    service: http://localhost:5001
+  - service: http_status:404
