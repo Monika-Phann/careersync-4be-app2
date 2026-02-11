@@ -1,15 +1,45 @@
 services:
-  backend:
-    image: careersync-api:v1
-    ports:
-      - "5000:5000"
+  admin-hub:
+    build:
+      context: ./admin-hub
     restart: always
-    # Add environment variables here if your server.js needs them (DB_URL, etc.)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - app-network
 
-  frontend:
-    image: careersync-user-client:v1
+  mentor-hub:
+    build:
+      context: ./mentor-hub
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:latest
     ports:
       - "80:80"
-    depends_on:
-      - backend
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
     restart: always
+    depends_on:
+      admin-hub:
+        condition: service_healthy
+      mentor-hub:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
