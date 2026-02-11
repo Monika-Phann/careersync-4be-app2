@@ -1,0 +1,15 @@
+services:
+  backend:
+    image: careersync-api:v1
+    ports:
+      - "5000:5000"
+    restart: always
+    # Add environment variables here if your server.js needs them (DB_URL, etc.)
+
+  frontend:
+    image: careersync-user-client:v1
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always

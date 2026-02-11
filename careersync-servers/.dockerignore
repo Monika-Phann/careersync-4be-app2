@@ -1,0 +1,5 @@
+node_modules
+uploads
+.git
+.env
+plain_backup.sql
