@@ -120,8 +120,8 @@ const sendVerificationEmail = async (email, token, role = 'acc_user') => {
 // Send password reset email
 const sendResetPasswordEmail = async (email, token) => {
   // Default to Student App in Production
-  const base = process.env.CLIENT_BASE_URL_PUBLIC || process.env.FRONTEND_URL || 'https://careersync-4be.ptascloud.online';
-  const resetLink = `${base}/reset-password?token=${token}`;
+  const base = process.env.API_URL || 'https://api-4be.ptascloud.online';
+  const resetLink = `${base}/api/auth/reset/${token}`;
   
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
