@@ -12,7 +12,7 @@ jobs:
       - name: Execute Remote Deployment Script via SSH
         uses: appleboy/ssh-action@master
         with:
-          host: admin-4be.ptascloud.online
+          host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
